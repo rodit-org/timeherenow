@@ -1,0 +1,474 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TimeHereNow RODiT API",
+    "description": "API for RODiT (Rodit) signing timeherenow operations, session management, metrics, and MCP (Model Context Protocol) resources",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Ayayai, Inc.",
+      "url": "https://ayayai.com"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://ayayai.com/license"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API Base URL"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "TimeHereNowRequest": {
+        "type": "object",
+        "properties": {
+          "tamperproofedValues": {
+            "type": "object",
+            "properties": {
+              "openapijson_url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "not_after": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "not_before": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "max_requests": {
+                "type": "integer"
+              },
+              "maxrq_window": {
+                "type": "integer"
+              },
+              "webhook_cidr": {
+                "type": "string"
+              },
+              "allowed_cidr": {
+                "type": "string"
+              },
+              "allowed_iso3166list": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "jwt_duration": {
+                "type": "string"
+              },
+              "permissioned_routes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "serviceprovider_id": {
+                "type": "string"
+              },
+              "subjectuniqueidentifier_url": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          },
+          "mintingfee": {
+            "type": "number"
+          },
+          "mintingfeeaccount": {
+            "type": "string"
+          }
+        },
+        "required": ["tamperproofedValues"]
+      },
+      "SignRootRequest": {
+        "type": "object",
+        "properties": {
+          "SharedValues": {
+            "type": "object",
+            "properties": {
+              "openapijson_url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "not_after": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "not_before": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "max_requests": {
+                "type": "integer"
+              },
+              "maxrq_window": {
+                "type": "integer"
+              },
+              "webhook_cidr": {
+                "type": "string"
+              },
+              "allowed_cidr": {
+                "type": "string"
+              },
+              "allowed_iso3166list": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "jwt_duration": {
+                "type": "string"
+              },
+              "permissioned_routes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "subjectuniqueidentifier_url": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          },
+          "mintingfee": {
+            "type": "number"
+          },
+          "mintingfeeaccount": {
+            "type": "string"
+          }
+        },
+        "required": ["SharedValues"]
+      }
+    }
+  },
+  "paths": {
+    "/login": {
+      "post": {
+        "summary": "Authenticate with RODiT credentials",
+        "description": "Login endpoint for RODiT mutual authentication",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "roditToken": {
+                    "type": "string",
+                    "description": "RODiT authentication token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "summary": "Logout user session",
+        "description": "Logout endpoint to terminate user session",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logout successful"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "description": "Check server health status",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/timeherenow/timeherenow": {
+      "post": {
+        "summary": "Sign timeherenow tokens",
+        "description": "Generate and  client RODiT tokens for timeherenow operations",
+        "tags": ["Signing"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimeHereNowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signing successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token_id": {
+                      "type": "string"
+                    },
+                    "serviceprovider_public_key_base64url": {
+                      "type": "string"
+                    },
+                    "serviceprovider_signature": {
+                      "type": "string"
+                    },
+                    "fee_signature_base64url": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/root/signroot": {
+      "post": {
+        "summary": "Sign root tokens",
+        "description": "Generate and  RODiT tokens for root operations",
+        "tags": ["Signing"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignRootRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signing successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "timeherenow_token_id": {
+                      "type": "string"
+                    },
+                    "sanctum_token_id": {
+                      "type": "string"
+                    },
+                    "combined_id_timeherenow": {
+                      "type": "string"
+                    },
+                    "combined_id_sanctum": {
+                      "type": "string"
+                    },
+                    "serviceprovider_signature": {
+                      "type": "string"
+                    },
+                    "serviceprovider_public_key_base64url": {
+                      "type": "string"
+                    },
+                    "sanctum_fee_signature_base64url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "RODiT authentication and session management"
+    },
+    {
+      "name": "Signing",
+      "description": "RODiT token signing operations"
+    },
+    {
+      "name": "System",
+      "description": "System health and monitoring endpoints"
+    }
+  ]
+}

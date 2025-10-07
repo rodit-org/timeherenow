@@ -1,0 +1,54 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: https://grafana.cableguard.net:3100/loki/api/v1/push
+    tls_config:
+      insecure_skip_verify: true
+    # The backoff_config section helps with retries
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+scrape_configs:
+  - job_name: node_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: timeherenow-api
+          hostname: "timeherenow.rodit.org"
+          app: timeherenow-api
+          __path__: /app/logs/*.log
+    pipeline_stages:
+      - regex:
+          expression: '(?P<filename>[^/]+)\.log$'
+      - regex:
+          expression: '(?P<component>api|nginx|system)(?P<logtype>error|access|info)'
+          source: filename
+      - match:
+          selector: '{filename=~".+"} |~ "Webhook server listening on port 8080"'
+          stages:
+            - drop:
+                expression: ".*"  # Drop all messages that match the selector
+      # Simple filtering approach instead of deduplication
+      - match:
+          selector: '{filename=~".+"}'
+          stages:
+            - output:
+                source: message
+      # You can add more pipeline stages here if needed
+      - labels:
+          component:
+          logtype:
+      # Final labels extraction
+      - labels:
+          component:
+          logtype:
+          level:
+          service_name:

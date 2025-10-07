@@ -1,0 +1,11 @@
+{
+  "METHOD_PERMISSION_MAP": {
+    "/health": ["entityAndProperties", "entityOnly"],
+    "/api/login": ["entityAndProperties"],
+    "/api/logout": ["entityAndProperties"],
+    "/api/timeherenow": ["entityAndProperties"],
+    "/api/signroot": ["entityAndProperties"]
+  },
+  "MINTING_FEEACCOUNT": "20251001-rodit-org.testnet",
+  "MINTING_FEE": "0.1"
+}
