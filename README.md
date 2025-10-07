@@ -62,8 +62,6 @@ The API uses a unique identifier generation system based on facial feature combi
 **Available Endpoints**:
 - `POST /login` - Authentication (no auth required)
 - `POST /logout` - Logout (requires auth)
-- `POST /api/timeherenow/timeherenow` - Sign timeherenow tokens (requires auth)
-- `POST /api/root/signroot` - Sign root tokens (no auth required)
 - `GET /health` - Health check
 - `GET /api-docs` - API documentation
 
@@ -102,90 +100,7 @@ Session termination endpoint (requires authentication).
 
 #### Signing Endpoints
 
-##### POST /api/timeherenow/timeherenow
-Generates and signs client RODIT tokens for timeherenow operations.
-
-**Headers**: `Authorization: Bearer <JWT_TOKEN>`
-
-**Request Body**:
-```json
-{
-  "tamperproofedValues": {
-    "serviceprovider_id": "string",
-    "openapijson_url": "string (URI format)", 
-    "not_after": "string (ISO date-time)",
-    "not_before": "string (ISO date-time)",
-    "max_requests": "integer",
-    "maxrq_window": "integer",
-    "webhook_cidr": "string",
-    "allowed_cidr": "string",
-    "allowed_iso3166list": "array of strings",
-    "jwt_duration": "string",
-    "permissioned_routes": "array of strings",
-    "subjectuniqueidentifier_url": "string (URI format)"
-  },
-  "mintingfee": "number",
-  "mintingfeeaccount": "string"
-}
-```
-
-**Response (200)**:
-```json
-{
-  "token_id": "ALBFCHDBEDFDGBHEIBJAKEV",
-  "serviceprovider_public_key_base64url": "string",
-  "serviceprovider_signature": "string", 
-  "fee_signature_base64url": "string",
-  "requestId": "string",
-  "...tamperproofedValues"
-}
-```
-
-##### POST /api/root/signroot
-Generates and signs RODiT tokens for root operations (more complex dual-token system).
-
-**Request Body**:
-```json
-{
-  "SharedValues": {
-    "openapijson_url": "string (URI format)",
-    "not_after": "string (ISO date-time)",
-    "not_before": "string (ISO date-time)",
-    "max_requests": "integer",
-    "maxrq_window": "integer",
-    "webhook_cidr": "string",
-    "allowed_cidr": "string",
-    "allowed_iso3166list": "array of strings",
-    "jwt_duration": "string",
-    "permissioned_routes": "array of strings",
-    "subjectuniqueidentifier_url": "string (URI format)"
-  },
-  "mintingfee": "number",
-  "mintingfeeaccount": "string"
-}
-```
-
-**Response (200)**:
-```json
-{
-  "timeherenow_token_id": "string",
-  "sanctum_token_id": "string", 
-  "combined_id_timeherenow": "string",
-  "combined_id_sanctum": "string",
-  "serviceprovider_signature": "string",
-  "serviceprovider_public_key_base64url": "string",
-  "sanctum_fee_signature_base64url": "string"
-}
-```
-
-**Error Responses (400/401/500)**:
-```json
-{
-  "error": "string",
-  "message": "string", 
-  "requestId": "string"
-}
-```
+Not available in this API build.
 
 #### System Endpoints
 
@@ -220,14 +135,20 @@ The `METHOD_PERMISSION_MAP` defines which API methods require specific permissio
 ```json
 {
   "METHOD_PERMISSION_MAP": {
-    "timeherenow": ["entityAndProperties"],
-    "signroot": ["entityAndProperties"]
+    "timezone": ["entityAndProperties", "entityOnly"],
+    "timezone.txt": ["entityAndProperties", "entityOnly"],
+    "ip": ["entityAndProperties", "entityOnly"],
+    "ip.txt": ["entityAndProperties", "entityOnly"],
+    "near-health": ["entityAndProperties"],
+    "logout": ["entityAndProperties"]
   }
 }
 ```
 
-- **timeherenow**: Requires `entityAndProperties` permission for client RODIT token signing (`/api/timeherenow/timeherenow`)
-- **signroot**: Requires `entityAndProperties` permission for root RODIT token signing (`/api/root/signroot`)
+- **timezone**/**timezone.txt**: List timezones and access area-specific listings
+- **ip**/**ip.txt**: Get current time based on client/specified IP
+- **near-health**: NEAR RPC health check endpoint
+- **logout**: Session termination
 
 These permissions are validated against the RODIT token's `permissioned_routes` field during API calls.
 

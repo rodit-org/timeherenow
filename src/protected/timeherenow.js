@@ -163,7 +163,7 @@ class RoditClientSigner {
       const message = new Uint8Array(Buffer.from(combinedHash, "hex"));
 
       // Sign the message with the key
-      const signature = nacl..detached(message, this.signingBytesKey);
+      const signature = nacl.sign.detached(message, this.signingBytesKey);
 
       // Convert signature to base64url format
       const base64urlSignature = base64url(Buffer.from(signature));
@@ -191,7 +191,7 @@ class RoditClientSigner {
       return this.signingBytesKey.slice(32);
     } else {
       // Otherwise, derive the public key using nacl
-      return nacl..keyPair.fromSecretKey(this.signingBytesKey).publicKey;
+      return nacl.sign.keyPair.fromSecretKey(this.signingBytesKey).publicKey;
     }
   }
 
@@ -250,16 +250,13 @@ async function ensureInitialized(req, res, next) {
 };
 
 /**
- * POST /timeherenow - Generate and  client RODIT tokens
- */
-/**
- * POST /timeherenow - Generate and  client RODIT tokens
+ * POST /timeherenow - Generate and sign client RODIT tokens
  */
 router.post("/timeherenow", ensureInitialized, async (req, res) => {
   // Use existing requestId if available or generate a new one
   const requestId = req.requestId || ulid();
   
-  logger.info("Processing  request", {
+  logger.info("Processing sign request", {
     component: "ClientSigner",
     action: "sign_timeherenow",
     requestId: requestId,

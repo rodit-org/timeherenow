@@ -1,474 +1,583 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.0.1",
   "info": {
-    "title": "TimeHereNow RODiT API",
-    "description": "API for RODiT (Rodit) signing timeherenow operations, session management, metrics, and MCP (Model Context Protocol) resources",
-    "version": "1.0.0",
-    "contact": {
-      "name": "Ayayai, Inc.",
-      "url": "https://ayayai.com"
-    },
-    "license": {
-      "name": "Proprietary",
-      "url": "https://ayayai.com/license"
-    }
+    "title": "Time Here Now API",
+    "version": "20210108",
+    "description": "API to get the current time based on timezone or client IP."
   },
   "servers": [
     {
-      "url": "/api",
-      "description": "API Base URL"
+      "url": "http://timeherenow.rodit.org/api/"
     }
   ],
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    },
-    "schemas": {
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "requestId": {
-            "type": "string"
+  "paths": {
+    "/timezone": {
+      "put": {
+        "summary": "a listing of all timezones.",
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/SuccessfulListJsonResponse"
           }
         }
-      },
-      "TimeHereNowRequest": {
-        "type": "object",
-        "properties": {
-          "tamperproofedValues": {
-            "type": "object",
-            "properties": {
-              "openapijson_url": {
-                "type": "string",
-                "format": "uri"
-              },
-              "not_after": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "not_before": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "max_requests": {
-                "type": "integer"
-              },
-              "maxrq_window": {
-                "type": "integer"
-              },
-              "webhook_cidr": {
-                "type": "string"
-              },
-              "allowed_cidr": {
-                "type": "string"
-              },
-              "allowed_iso3166list": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "jwt_duration": {
-                "type": "string"
-              },
-              "permissioned_routes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "serviceprovider_id": {
-                "type": "string"
-              },
-              "subjectuniqueidentifier_url": {
-                "type": "string",
-                "format": "uri"
-              }
-            }
-          },
-          "mintingfee": {
-            "type": "number"
-          },
-          "mintingfeeaccount": {
-            "type": "string"
-          }
-        },
-        "required": ["tamperproofedValues"]
-      },
-      "SignRootRequest": {
-        "type": "object",
-        "properties": {
-          "SharedValues": {
-            "type": "object",
-            "properties": {
-              "openapijson_url": {
-                "type": "string",
-                "format": "uri"
-              },
-              "not_after": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "not_before": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "max_requests": {
-                "type": "integer"
-              },
-              "maxrq_window": {
-                "type": "integer"
-              },
-              "webhook_cidr": {
-                "type": "string"
-              },
-              "allowed_cidr": {
-                "type": "string"
-              },
-              "allowed_iso3166list": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "jwt_duration": {
-                "type": "string"
-              },
-              "permissioned_routes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "subjectuniqueidentifier_url": {
-                "type": "string",
-                "format": "uri"
-              }
-            }
-          },
-          "mintingfee": {
-            "type": "number"
-          },
-          "mintingfeeaccount": {
-            "type": "string"
-          }
-        },
-        "required": ["SharedValues"]
       }
-    }
-  },
-  "paths": {
-    "/login": {
-      "post": {
-        "summary": "Authenticate with RODiT credentials",
-        "description": "Login endpoint for RODiT mutual authentication",
-        "tags": ["Authentication"],
+    },
+    "/timezone.txt": {
+      "put": {
+        "summary": "a listing of all timezones.",
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/SuccessfulListTextResponse"
+          }
+        }
+      }
+    },
+    "/timezone/area": {
+      "put": {
+        "summary": "a listing of all timezones available for that area.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["area"],
                 "properties": {
-                  "roditToken": {
-                    "type": "string",
-                    "description": "RODiT authentication token"
-                  }
+                  "area": { "type": "string" }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Authentication successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        }
-                      }
-                    },
-                    "token": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication failed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "200": { "$ref": "#/components/responses/SuccessfulListJsonResponse" },
+          "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
     },
-    "/logout": {
-      "post": {
-        "summary": "Logout user session",
-        "description": "Logout endpoint to terminate user session",
-        "tags": ["Authentication"],
-        "security": [
-          {
-            "bearerAuth": []
+    "/timezone/area.txt": {
+      "put": {
+        "summary": "a listing of all timezones available for that area.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["area"],
+                "properties": {
+                  "area": { "type": "string" }
+                }
+              }
+            }
           }
-        ],
+        },
         "responses": {
-          "200": {
-            "description": "Logout successful"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+          "200": { "$ref": "#/components/responses/SuccessfulListTextResponse" },
+          "default": { "$ref": "#/components/responses/ErrorTextResponse" }
+        }
+      }
+    },
+    "/timezone/time": {
+      "put": {
+        "summary": "request the current time for a timezone.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["area", "location"],
+                "properties": {
+                  "area": { "type": "string" },
+                  "location": { "type": "string" },
+                  "region": { "type": "string" }
                 }
               }
             }
           }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse" },
+          "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
     },
-    "/health": {
+    "/timezone/time.txt": {
+      "put": {
+        "summary": "request the current time for a timezone.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["area", "location"],
+                "properties": {
+                  "area": { "type": "string" },
+                  "location": { "type": "string" },
+                  "region": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessfulDateTimeTextResponse" },
+          "default": { "$ref": "#/components/responses/ErrorTextResponse" }
+        }
+      }
+    },
+    "/timezone/{area}": {
       "get": {
-        "summary": "Health check endpoint",
-        "description": "Check server health status",
-        "tags": ["System"],
+        "summary": "a listing of all timezones available for that area.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Server is healthy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "healthy"
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/SuccessfulListJsonResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorJsonResponse"
           }
         }
       }
     },
-    "/timeherenow/timeherenow": {
-      "post": {
-        "summary": "Sign timeherenow tokens",
-        "description": "Generate and  client RODiT tokens for timeherenow operations",
-        "tags": ["Signing"],
-        "security": [
+    "/timezone/{area}.txt": {
+      "get": {
+        "summary": "a listing of all timezones available for that area.",
+        "parameters": [
           {
-            "bearerAuth": []
+            "name": "area",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessfulListTextResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorTextResponse"
+          }
+        }
+      }
+    },
+    "/timezone/{area}/{location}": {
+      "get": {
+        "summary": "request the current time for a timezone.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "location",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorJsonResponse"
+          }
+        }
+      }
+    },
+    "/timezone/{area}/{location}.txt": {
+      "get": {
+        "summary": "request the current time for a timezone.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "location",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessfulDateTimeTextResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorTextResponse"
+          }
+        }
+      }
+    },
+    "/timezone/{area}/{location}/{region}": {
+      "get": {
+        "summary": "request the current time for a timezone.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "location",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorJsonResponse"
+          }
+        }
+      }
+    },
+    "/timezone/{area}/{location}/{region}.txt": {
+      "get": {
+        "summary": "request the current time for a timezone.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "location",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessfulDateTimeTextResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorTextResponse"
+          }
+        }
+      }
+    },
+    "/ip": {
+      "put": {
+        "summary": "request the current time based on the ip of the request or provided IPv4.",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TimeHereNowRequest"
+                "type": "object",
+                "properties": {
+                  "ipv4": { "type": "string", "description": "Optional IPv4 address" }
+                }
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Signing successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token_id": {
-                      "type": "string"
-                    },
-                    "serviceprovider_public_key_base64url": {
-                      "type": "string"
-                    },
-                    "serviceprovider_signature": {
-                      "type": "string"
-                    },
-                    "fee_signature_base64url": {
-                      "type": "string"
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "200": { "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse" },
+          "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
     },
-    "/root/signroot": {
-      "post": {
-        "summary": "Sign root tokens",
-        "description": "Generate and  RODiT tokens for root operations",
-        "tags": ["Signing"],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+    "/ip.txt": {
+      "put": {
+        "summary": "request the current time based on the ip of the request or provided IPv4.",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SignRootRequest"
+                "type": "object",
+                "properties": {
+                  "ipv4": { "type": "string", "description": "Optional IPv4 address" }
+                }
               }
             }
           }
         },
         "responses": {
+          "200": { "$ref": "#/components/responses/SuccessfulDateTimeTextResponse" },
+          "default": { "$ref": "#/components/responses/ErrorTextResponse" }
+        }
+      }
+    },
+    "/ip/{ipv4}": {
+      "get": {
+        "summary": "request the current time based on the ip of the request. note: this is a \"best guess\" obtained from open-source data.",
+        "parameters": [
+          {
+            "name": "ipv4",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
           "200": {
-            "description": "Signing successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "timeherenow_token_id": {
-                      "type": "string"
-                    },
-                    "sanctum_token_id": {
-                      "type": "string"
-                    },
-                    "combined_id_timeherenow": {
-                      "type": "string"
-                    },
-                    "combined_id_sanctum": {
-                      "type": "string"
-                    },
-                    "serviceprovider_signature": {
-                      "type": "string"
-                    },
-                    "serviceprovider_public_key_base64url": {
-                      "type": "string"
-                    },
-                    "sanctum_fee_signature_base64url": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse"
           },
-          "400": {
-            "description": "Bad request - validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
+          "default": {
+            "$ref": "#/components/responses/ErrorJsonResponse"
+          }
+        }
+      }
+    },
+    "/ip/{ipv4}.txt": {
+      "get": {
+        "summary": "request the current time based on the ip of the request. note: this is a \"best guess\" obtained from open-source data.",
+        "parameters": [
+          {
+            "name": "ipv4",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessfulDateTimeTextResponse"
           },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+          "default": {
+            "$ref": "#/components/responses/ErrorTextResponse"
           }
         }
       }
     }
   },
-  "tags": [
-    {
-      "name": "Authentication",
-      "description": "RODiT authentication and session management"
+  "components": {
+    "responses": {
+      "SuccessfulListJsonResponse": {
+        "description": "the list of available timezones in JSON format",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListJsonResponse"
+            }
+          }
+        }
+      },
+      "SuccessfulListTextResponse": {
+        "description": "the list of available timezones in plain text",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/ListTextResponse"
+            }
+          }
+        }
+      },
+      "SuccessfulDateTimeJsonResponse": {
+        "description": "the current time for the timezone requested in JSON format",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DateTimeJsonResponse"
+            }
+          }
+        }
+      },
+      "SuccessfulDateTimeTextResponse": {
+        "description": "the current time for the timezone requested in plain text",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/DateTimeTextResponse"
+            }
+          }
+        }
+      },
+      "ErrorJsonResponse": {
+        "description": "an error response in JSON format",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorJsonResponse"
+            }
+          }
+        }
+      },
+      "ErrorTextResponse": {
+        "description": "an error response in plain text",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorTextResponse"
+            }
+          }
+        }
+      }
     },
-    {
-      "name": "Signing",
-      "description": "RODiT token signing operations"
-    },
-    {
-      "name": "System",
-      "description": "System health and monitoring endpoints"
+    "schemas": {
+      "ListJsonResponse": {
+        "type": "array",
+        "description": "a list of available timezones",
+        "items": {
+          "type": "string"
+        }
+      },
+      "ListTextResponse": {
+        "type": "string",
+        "description": "a list of available timezones, one per line"
+      },
+      "DateTimeJsonResponse": {
+        "type": "object",
+        "required": [
+          "abbreviation",
+          "client_ip",
+          "datetime",
+          "day_of_week",
+          "day_of_year",
+          "dst",
+          "dst_offset",
+          "timezone",
+          "unixtime",
+          "utc_datetime",
+          "utc_offset",
+          "week_number"
+        ],
+        "properties": {
+          "abbreviation": {
+            "type": "string",
+            "description": "the abbreviated name of the timezone"
+          },
+          "client_ip": {
+            "type": "string",
+            "description": "the IP of the client making the request"
+          },
+          "datetime": {
+            "type": "string",
+            "description": "an ISO8601-valid string representing the current, local date/time"
+          },
+          "day_of_week": {
+            "type": "integer",
+            "description": "current day number of the week, where sunday is 0"
+          },
+          "day_of_year": {
+            "type": "integer",
+            "description": "ordinal date of the current year"
+          },
+          "dst": {
+            "type": "boolean",
+            "description": "flag indicating whether the local time is in daylight savings"
+          },
+          "dst_from": {
+            "type": "string",
+            "description": "an ISO8601-valid string representing the datetime when daylight savings started for this timezone"
+          },
+          "dst_offset": {
+            "type": "integer",
+            "description": "the difference in seconds between the current local time and daylight saving time for the location"
+          },
+          "dst_until": {
+            "type": "string",
+            "description": "an ISO8601-valid string representing the datetime when daylight savings will end for this timezone"
+          },
+          "raw_offset": {
+            "type": "integer",
+            "description": "the difference in seconds between the current local time and the time in UTC, excluding any daylight saving difference (see dst_offset)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "timezone in `Area/Location` or `Area/Location/Region` format"
+          },
+          "unixtime": {
+            "type": "integer",
+            "description": "number of seconds since the Epoch"
+          },
+          "utc_datetime": {
+            "type": "string",
+            "description": "an ISO8601-valid string representing the current date/time in UTC"
+          },
+          "utc_offset": {
+            "type": "string",
+            "description": "an ISO8601-valid string representing the offset from UTC"
+          },
+          "week_number": {
+            "type": "integer",
+            "description": "the current week number"
+          }
+        }
+      },
+      "DateTimeTextResponse": {
+        "type": "string",
+        "description": "time zone details, as per the DateTimeJsonResponse response, in the format `key: value` , one item per line"
+      },
+      "ErrorJsonResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "details about the error encountered"
+          }
+        }
+      },
+      "ErrorTextResponse": {
+        "type": "string",
+        "description": "details about the error encountered in plain text"
+      }
     }
-  ]
+  }
 }

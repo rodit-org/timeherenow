@@ -1,10 +1,14 @@
 {
   "METHOD_PERMISSION_MAP": {
-    "/health": ["entityAndProperties", "entityOnly"],
-    "/api/login": ["entityAndProperties"],
-    "/api/logout": ["entityAndProperties"],
-    "/api/timeherenow": ["entityAndProperties"],
-    "/api/signroot": ["entityAndProperties"]
+    "timezone": ["entityAndProperties", "entityOnly"],
+    "timezone.txt": ["entityAndProperties", "entityOnly"],
+    "area": ["entityAndProperties", "entityOnly"],
+    "time": ["entityAndProperties", "entityOnly"],
+    "time.txt": ["entityAndProperties", "entityOnly"],
+    "ip": ["entityAndProperties", "entityOnly"],
+    "ip.txt": ["entityAndProperties", "entityOnly"],
+    "near-health": ["entityAndProperties"],
+    "logout": ["entityAndProperties"]
   },
   "MINTING_FEEACCOUNT": "20251001-rodit-org.testnet",
   "MINTING_FEE": "0.1"
