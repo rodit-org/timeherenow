@@ -71,6 +71,14 @@
         },
         "responses": {
           "200": { "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse" },
+          "503": {
+            "description": "NEAR time unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorJsonResponse" }
+              }
+            }
+          },
           "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
@@ -119,6 +127,14 @@
         },
         "responses": {
           "200": { "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse" },
+          "503": {
+            "description": "NEAR time unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorJsonResponse" }
+              }
+            }
+          },
           "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
@@ -249,6 +265,10 @@
           "week_number": {
             "type": "integer",
             "description": "the current week number"
+          },
+          "likely_time_difference_ms": {
+            "type": "integer",
+            "description": "conservative >99% likely upper-bound difference (milliseconds) between real time and the returned time, based on 5Hz polling and ~0.6s block interval"
           }
         }
       },

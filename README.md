@@ -87,7 +87,8 @@ The API uses a unique identifier generation system based on facial feature combi
   "utc_offset": "+02:00",
   "week_number": 41,
   "raw_offset": 3600,
-  "locale": "de-DE"
+  "locale": "de-DE",
+  "likely_time_difference_ms": 850
 }
 ```
 Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `day_of_week`, `day_of_year`, `dst_trueorfalse`, `dst_offset`, `time_zone`, `unix_time`, `utc_datetime`, `utc_offset`, `week_number`.
@@ -142,6 +143,8 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
     ```
     - Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `day_of_week`, `day_of_year`, `dst_trueorfalse`, `dst_offset`, `time_zone`, `unix_time`, `utc_datetime`, `utc_offset`, `week_number`.
     - `raw_offset` (seconds) and `locale` are also returned for convenience but are not required.
+    - `likely_time_difference_ms` is a conservative (>99% likely) upper bound on the difference between real time and the returned time, given 5 Hz polling and ~0.6 s block time.
+  - Errors: returns HTTP 503 if NEAR blockchain time is unavailable.
 
 - **PUT `/api/ip`**
   - Request (optional IP; falls back to client IP):
@@ -149,6 +152,7 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
     { "ip": "2001:db8::1", "locale": "en-GB" }
     ```
   - Response: DateTimeJsonResponse (same as above), using timezone resolved from the IP.
+  - Errors: returns HTTP 503 if NEAR blockchain time is unavailable.
 
 - **PUT `/api/near-health`**
   - Response:
@@ -162,6 +166,14 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
 - Update tzdb:
   - `npm run update-tzdata` (uses `scripts/update-tzdata.sh`)
   - Check version/count: `npm run tz:version`
+
+##### NEAR time polling and availability
+- The API polls NEAR blockchain time at 5 Hz and serves the most recent cached value to reduce latency and RPC load.
+- If NEAR time is unavailable (no cached value), time endpoints return HTTP 503.
+- Tuning environment variables:
+  - `NEAR_POLL_MS` (default `200`): polling interval in ms
+  - `NEAR_BLOCK_MS` (default `600`): expected block interval in ms
+  - `NEAR_NET_MARGIN_MS` (default `50`): network jitter margin in ms
 
 #### Authentication Endpoints
 

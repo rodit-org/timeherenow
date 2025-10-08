@@ -42,11 +42,12 @@ function handleError(res, error, format = 'json') {
   });
 
   const errorMessage = error.message || 'Internal server error';
+  const statusCode = /NEAR time unavailable/i.test(errorMessage) ? 503 : 404;
   
   if (format === 'text') {
-    res.status(404).type('text/plain').send(errorMessage);
+    res.status(statusCode).type('text/plain').send(errorMessage);
   } else {
-    res.status(404).json({ error: errorMessage });
+    res.status(statusCode).json({ error: errorMessage });
   }
 }
 
@@ -163,7 +164,7 @@ router.put('/ip', async (req, res) => {
  */
 router.put('/near-health', async (req, res) => {
   try {
-    const healthStatus = await timezoneService.nearTimestampService.healthCheck();
+    const healthStatus = await timezoneService.healthCheck();
     res.json(healthStatus);
   } catch (error) {
     res.status(500).json({

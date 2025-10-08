@@ -2,130 +2,13 @@
   // Time Here Now - API Service
 
   const geoip = require('geoip-lite');
-  const axios = require('axios');
   const { getTimeZones } = require('@vvo/tzdb');
-
-/**
- * NEAR RPC Timestamp Service (inlined)
- * Fetches timestamps from NEAR blockchain RPC instead of using system time
- */
-class NearTimestampService {
-  constructor() {
-    // NEAR mainnet RPC endpoint
-    this.rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
-    this.timeout = parseInt(process.env.NEAR_RPC_TIMEOUT) || 5000; // 5 second timeout
-    this.fallbackToSystemTime = process.env.NEAR_FALLBACK_SYSTEM_TIME !== 'false';
-
-    // Cache timestamp for a short period to avoid excessive RPC calls
-    this.cache = {
-      timestamp: null,
-      lastFetch: 0,
-      ttl: 1000 // 1 second cache TTL
-    };
-  }
-
-  /**
-   * Get current timestamp from NEAR RPC
-   * Returns timestamp in milliseconds
-   */
-  async getNearTimestamp() {
-    try {
-      // Check cache first
-      const now = Date.now();
-      if (this.cache.timestamp && (now - this.cache.lastFetch) < this.cache.ttl) {
-        return this.cache.timestamp;
-      }
-
-      const response = await axios.post(this.rpcEndpoint, {
-        jsonrpc: '2.0',
-        id: 'dontcare',
-        method: 'status',
-        params: []
-      }, {
-        timeout: this.timeout,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.data && response.data.result && response.data.result.sync_info) {
-        // NEAR returns timestamp (implementation dependent). We normalize to ms when numeric.
-        const nearTimestampNs = response.data.result.sync_info.latest_block_time;
-        // If it's a number in ns, convert to ms; otherwise, fall back to Date.now()
-        const nearTimestampMs = typeof nearTimestampNs === 'number'
-          ? Math.floor(nearTimestampNs / 1_000_000)
-          : Date.now();
-
-        // Update cache
-        this.cache.timestamp = nearTimestampMs;
-        this.cache.lastFetch = now;
-
-        return nearTimestampMs;
-      } else {
-        throw new Error('Invalid response format from NEAR RPC');
-      }
-    } catch (error) {
-      console.error('Error fetching NEAR timestamp:', error.message);
-
-      if (this.fallbackToSystemTime) {
-        console.warn('Falling back to system time');
-        return Date.now();
-      } else {
-        throw new Error(`Failed to fetch NEAR timestamp: ${error.message}`);
-      }
-    }
-  }
-
-  /**
-   * Get current timestamp in seconds (Unix timestamp)
-   */
-  async getCurrentUnixTime() {
-    const timestampMs = await this.getNearTimestamp();
-    return Math.floor(timestampMs / 1000);
-  }
-
-  /**
-   * Get current Date object using NEAR timestamp
-   */
-  async getCurrentDate() {
-    const timestampMs = await this.getNearTimestamp();
-    return new Date(timestampMs);
-  }
-
-  /**
-   * Get current timestamp in ISO string format
-   */
-  async getCurrentISOString() {
-    const date = await this.getCurrentDate();
-    return date.toISOString();
-  }
-
-  /**
-   * Health check for NEAR RPC connection
-   */
-  async healthCheck() {
-    try {
-      await this.getNearTimestamp();
-      return {
-        status: 'healthy',
-        endpoint: this.rpcEndpoint,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error) {
-      return {
-        status: 'unhealthy',
-        endpoint: this.rpcEndpoint,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-}
+  const { blockchainService } = require('@rodit/rodit-auth-be');
 
 /**
  * TimeZone Service for Time Here Now API
  * Provides timezone data, current time information, and IP-based timezone lookup
- * Uses NEAR RPC timestamp instead of system time
+ * Uses NEAR RPC timestamp from @rodit/rodit-auth-be SDK
  */
 class TimeZoneService {
   constructor() {
@@ -137,9 +20,90 @@ class TimeZoneService {
     this.cldrCache = {
       tzNamesByLocale: {}
     };
+    
+    // NEAR polling cache and settings
+    this.nearCache = { ms: null, iso: null, fetchedAt: 0 };
+    this._pollIntervalMs = parseInt(process.env.NEAR_POLL_MS) || 200; // 5 Hz
+    this._blockIntervalMs = parseInt(process.env.NEAR_BLOCK_MS) || 600; // ~0.6s
+    this._networkMarginMs = parseInt(process.env.NEAR_NET_MARGIN_MS) || 50;
 
-    // Initialize NEAR timestamp service
-    this.nearTimestampService = new NearTimestampService();
+    // Start background polling
+    this._startNearPolling();
+  }
+
+  /**
+   * Get current timestamp from NEAR RPC via SDK
+   * Returns timestamp in milliseconds
+   */
+  async _getNearTimestamp() {
+    // SDK returns ISO string, convert to ms; no fallback to system time
+    const isoString = await blockchainService.nearorg_rpc_timestamp();
+    return new Date(isoString).getTime();
+  }
+
+  /**
+   * Get current Date object using NEAR timestamp
+   */
+  async _getCurrentDate() {
+    const cachedMs = this._getCachedNearMsOrThrow();
+    return new Date(cachedMs);
+  }
+
+  /**
+   * Health check for NEAR RPC connection via SDK
+   */
+  async healthCheck() {
+    try {
+      const isoString = await blockchainService.nearorg_rpc_timestamp();
+      const rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
+      return {
+        status: 'healthy',
+        endpoint: rpcEndpoint,
+        timestamp: isoString
+      };
+    } catch (error) {
+      const rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
+      return {
+        status: 'unhealthy',
+        endpoint: rpcEndpoint,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  // Start polling NEAR time at configured frequency
+  _startNearPolling() {
+    if (this._pollTimer) return;
+    const poll = async () => {
+      try {
+        const iso = await blockchainService.nearorg_rpc_timestamp();
+        const ms = new Date(iso).getTime();
+        this.nearCache = { ms, iso, fetchedAt: Date.now() };
+      } catch (err) {
+        // Keep last good value; do not update cache on failure
+      }
+    };
+    // Prime immediately
+    poll().catch(() => {});
+    this._pollTimer = setInterval(poll, this._pollIntervalMs);
+  }
+
+  // Read cached NEAR ms or throw if unavailable
+  _getCachedNearMsOrThrow() {
+    const { ms } = this.nearCache || {};
+    if (typeof ms !== 'number' || Number.isNaN(ms)) {
+      throw new Error('NEAR time unavailable');
+    }
+    return ms;
+  }
+
+  // Conservative 99%-likely difference between real time and cached NEAR time (ms)
+  _likelyDiff99Ms(cachedMs) {
+    const now = Date.now();
+    const observedLag = Math.max(0, now - cachedMs);
+    const modelBound = this._blockIntervalMs + this._pollIntervalMs + this._networkMarginMs;
+    return Math.max(observedLag, modelBound);
   }
 
   // Helper: zero-pad
@@ -345,8 +309,8 @@ class TimeZoneService {
       throw new Error(`Invalid timezone: ${timezone}`);
     }
 
-    // Get current time from NEAR RPC
-    const nearDate = await this.nearTimestampService.getCurrentDate();
+    // Use most recent cached NEAR time
+    const nearDate = await this._getCurrentDate();
     const utcMs = nearDate.getTime();
 
     // Load tzdb and get info (includeUtc so UTC is always resolvable)
@@ -383,7 +347,8 @@ class TimeZoneService {
       unix_time: Math.floor(utcMs / 1000),
       utc_datetime: utcIso,
       utc_offset: this._formatOffset(currentOffsetMin),
-      week_number: week
+      week_number: week,
+      likely_time_difference_ms: this._likelyDiff99Ms(utcMs)
     };
   }
 
