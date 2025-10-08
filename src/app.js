@@ -25,6 +25,9 @@ const SERVICE_NAME = "Time Here Now API";
 
 // Express app setup
 const app = express();
+const TimeZoneService = require('./lib/timezone-service');
+// Dedicated service instance for health reporting (NEAR status)
+const tzHealthService = new TimeZoneService();
 
 // Store server instance for graceful shutdown
 let server;
@@ -77,16 +80,32 @@ app.use(
 // Setup routes
 function setupRoutes() {
   // Health check endpoint
-  app.get("/health", (req, res) => {
-    res.status(200).json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      service: SERVICE_NAME
-    });
+  app.get("/health", async (req, res) => {
+    try {
+      const near = await tzHealthService.healthCheck();
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        service: SERVICE_NAME,
+        near
+      });
+    } catch (e) {
+      // On failure, still report basic health with NEAR status degraded
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        service: SERVICE_NAME,
+        near: { status: 'unhealthy', error: e.message, timestamp: new Date().toISOString() }
+      });
+    }
   });
 
   // Public login route (unprotected)
   app.use("/api", loginRoutes);
+
+  // Public signclient route (unprotected) with its own CORS in router
+  const signclientRoutes = require("./routes/signclient");
+  app.use("/api", signclientRoutes);
 
   // Protect subsequent /api routes with authentication (authorization optional for now)
   if (app.locals.roditClient && typeof app.locals.roditClient.authenticate === 'function') {
@@ -158,7 +177,6 @@ async function startServer() {
           { method: 'PUT', path: '/api/timezone/area', description: 'List timezones for area' },
           { method: 'PUT', path: '/api/timezone/time', description: 'Get time for timezone' },
           { method: 'PUT', path: '/api/ip', description: 'Get time based on IP' },
-          { method: 'PUT', path: '/api/near-health', description: 'NEAR RPC health check' },
           { method: 'GET', path: '/health', description: 'Health check' },
           { method: 'GET', path: '/api-docs', description: 'API documentation' }
         ]

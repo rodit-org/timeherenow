@@ -7,7 +7,6 @@
     "time.txt": ["entityAndProperties", "entityOnly"],
     "ip": ["entityAndProperties", "entityOnly"],
     "ip.txt": ["entityAndProperties", "entityOnly"],
-    "near-health": ["entityAndProperties"],
     "logout": ["entityAndProperties"]
   },
   "MINTING_FEEACCOUNT": "20251001-rodit-org.testnet",

@@ -1,0 +1,210 @@
+name: Deploy Node.js API
+
+on:
+  push:
+    branches: [ 20250910mcp ]
+  pull_request:
+    branches: [ 20250910mcp ]
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit SHA to deploy'
+        required: true
+        default: ''
+
+env:
+  SSH_HOST: 174.138.10.2
+  SSH_USER: ${{ secrets.SSH_USER }}
+  WEBHOOK_DOMAIN: webhook.timeherenow.com
+  WEBHOOKPORT: 3444
+  NODE_VERSION: 20
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.commit_sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          name: id_rsa
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          
+      - name: Setup and Copy Files
+        run: |
+          echo "Setting up directories..."
+          ssh ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "mkdir -p ~/timeherenow-app/{certs,logs,data,nginx,promtail} && mkdir -p ~/timeherenow-app/logs/nginx && chmod 0775 ~/timeherenow-app/logs/nginx || true && podman unshare chown -R 101:101 ~/timeherenow-app/logs/nginx || true"
+          
+          echo "Copying API files..."
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'node_modules' \
+            --exclude 'certs' \
+            --exclude 'logs' \
+            --exclude 'data' \
+            ./ ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:~/timeherenow-app/
+
+      - name: Deploy Containers
+        run: |
+          ssh ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            set -x
+            cd ~/timeherenow-app
+            
+            # Clean up existing resources
+            echo 'Cleaning up existing resources...'
+            podman pod exists timeherenow-pod && podman pod rm -f timeherenow-pod
+            podman image exists timeherenow-image:latest && podman rmi -f timeherenow-image:latest
+            podman image exists localhost/timeherenow-nginx:latest && podman rmi -f localhost/timeherenow-nginx:latest
+            podman image exists localhost/timeherenow-promtail:latest && podman rmi -f localhost/timeherenow-promtail:latest
+            
+            # Create new pod
+            echo 'Creating API pod...'
+            podman pod create --name timeherenow-pod -p ${WEBHOOKPORT}:${WEBHOOKPORT}
+            
+            # Build and run API container
+            echo 'Building and running API container...'
+            echo 'DEBUG: LOKI_URL=${{ vars.LOKI_URL }}'
+            echo 'DEBUG: LOKI_TLS_SKIP_VERIFY=${{ vars.LOKI_TLS_SKIP_VERIFY }}'
+            echo 'DEBUG: LOKI_BASIC_AUTH length:' \${#LOKI_BASIC_AUTH}
+            echo 'DEBUG: RODIT_NEAR_CREDENTIALS_SOURCE=${{ vars.RODIT_NEAR_CREDENTIALS_SOURCE }}'
+            echo 'DEBUG: SERVICE_NAME=${{ vars.SERVICE_NAME }}'
+            echo 'DEBUG: SERVERPORT=${{ vars.SERVERPORT }}'
+            echo 'DEBUG: API_DEFAULT_OPTIONS_LOG_DIR=${{ vars.API_DEFAULT_OPTIONS_LOG_DIR }}'
+            echo 'DEBUG: NEAR_CONTRACT_ID=${{ vars.NEAR_CONTRACT_ID }}'
+            echo 'DEBUG: NEAR_CREDENTIALS_FILE_PATH=${{ vars.NEAR_CREDENTIALS_FILE_PATH }}'
+            podman build -t timeherenow-image:latest -f api.Dockerfile .
+            
+            # Debug: Container will be checked after creation
+            
+            # Ensure logs and data directories exist with correct permissions
+            echo 'Setting up logs and data directories...'
+            mkdir -p ~/timeherenow-app/logs ~/timeherenow-app/data
+            # Set permissions to 0775 for directories and 0664 for files
+            # Set ownership to 1000:1000 (nodeuser:nodeuser in container)
+            podman unshare chown -R 1000:1000 ~/timeherenow-app/logs ~/timeherenow-app/data || true
+            # Ensure the data directory is writable by the container user
+            podman unshare chmod g+w ~/timeherenow-app/data
+            
+            # Run API container with user 1000 and proper volume mounts
+            echo 'Running API container...'
+            podman run -d \
+              --pod timeherenow-pod \
+              --name timeherenow-container \
+              --user 1000:1000 \
+              --restart=unless-stopped \
+              -e LOKI_URL='${{ vars.LOKI_URL }}' \
+              -e LOKI_TLS_SKIP_VERIFY='${{ vars.LOKI_TLS_SKIP_VERIFY }}' \
+              -e LOKI_BASIC_AUTH='${{ secrets.LOKI_BASIC_AUTH }}' \
+              -e RODIT_NEAR_CREDENTIALS_SOURCE='${{ vars.RODIT_NEAR_CREDENTIALS_SOURCE }}' \
+              -e SERVICE_NAME='${{ vars.SERVICE_NAME }}' \
+              -e API_DEFAULT_OPTIONS_WEBHOOKPORT='${{ vars.API_DEFAULT_OPTIONS_WEBHOOKPORT }}' \
+              -e SERVERPORT='${{ vars.SERVERPORT }}' \
+              -e API_DEFAULT_OPTIONS_LOG_DIR='${{ vars.API_DEFAULT_OPTIONS_LOG_DIR }}' \
+              -e NEAR_CONTRACT_ID='${{ vars.NEAR_CONTRACT_ID }}' \
+              -e VAULT_ENDPOINT='${{ vars.VAULT_ENDPOINT }}' \
+              -e VAULT_RODIT_KEYVALUE_PATH='${{ vars.VAULT_RODIT_KEYVALUE_PATH }}' \
+              -e VAULT_ROLE_ID='${{ secrets.VAULT_ROLE_ID }}' \
+              -e VAULT_SECRET_ID='${{ secrets.VAULT_SECRET_ID }}' \
+              -e VAULT_TOKEN_TTL='${{ vars.VAULT_TOKEN_TTL }}' \
+              -e NEAR_CREDENTIALS_FILE_PATH='${{ vars.NEAR_CREDENTIALS_FILE_PATH }}' \
+              -v ~/timeherenow-app/logs:/app/logs:Z \
+              -v ~/timeherenow-app/data:/app/data:Z \
+              -v ~/timeherenow-app/certs:/app/certs:ro,Z \
+              timeherenow-image:latest
+
+            # Wait for container to fully start
+            sleep 5
+            
+            # Debug: Check container status
+            echo '=== Container Status ==='
+            podman ps -a | grep timeherenow-container || echo 'Container not found'
+            
+            # Debug: Check file system from inside the container
+            echo '\n=== Container File System Check ==='
+            echo 'Current working directory inside container:'
+            podman exec timeherenow-container pwd || echo 'Could not get working directory'
+            
+            echo '\nContents of /app/.near-credentials inside container:'
+            podman exec timeherenow-container ls -la /app/.near-credentials/ 2>/dev/null || echo 'No .near-credentials directory found in container'
+            
+            echo '\nFile permissions inside container:'
+            podman exec timeherenow-container ls -la /app/ 2>/dev/null || echo 'Could not list /app directory'
+            
+            echo '\nSearching for credential files inside container:'
+            podman exec timeherenow-container find / -path "*/.near-credentials" -type d 2>/dev/null || echo 'No credential directories found in container'
+            
+            echo '\nDisk usage inside container:'
+            podman exec timeherenow-container df -h 2>/dev/null || echo 'Could not get disk usage'
+            
+            echo '\nCurrent user inside container:'
+            podman exec timeherenow-container id 2>/dev/null || echo 'Could not get user info'
+            
+            # Check for any container logs that might indicate file access issues
+            echo '\n=== Container Logs (potential file access issues) ==='
+            podman logs timeherenow-container 2>&1 | grep -i -E 'error|warn|credential|file|permission|ENOENT' | tail -n 20 || echo 'No relevant logs found'
+            
+            # Wait for container to fully start
+            sleep 5
+            
+            # Check if container is running
+            echo 'Container status:'
+            podman ps -a | grep timeherenow-container || echo 'Container not found'
+            
+            # Build and run nginx
+            echo 'Building and running nginx...'
+            podman build -t localhost/timeherenow-nginx:latest -f nginx.Dockerfile .
+            # Ensure nginx log directory exists on host before mounting and is writable by container user
+            mkdir -p ~/timeherenow-app/logs/nginx
+            chmod 0775 ~/timeherenow-app/logs/nginx || true
+            podman unshare chown -R 101:101 ~/timeherenow-app/logs/nginx || true
+            podman run -d \
+              --pod timeherenow-pod \
+              --name timeherenow-nginx \
+              --restart=unless-stopped \
+              -v ~/timeherenow-app/certs:/app/certs:ro,Z \
+              -v ~/timeherenow-app/logs/nginx:/var/log/nginx:Z,U \
+              localhost/timeherenow-nginx:latest
+
+            # Promtail container temporarily disabled
+            # echo 'Skipping Promtail container build and run...'
+            # podman build -f promtail.Dockerfile -t localhost/timeherenow-promtail:latest .
+            # podman run -d --name=promtail-container \
+            #   --pod=timeherenow-pod \
+            #   -v $(pwd)/promtail:/etc/promtail \
+            #   -v $(pwd)/logs:/app/logs \
+            #   localhost/timeherenow-promtail:latest \
+            #   -config.file=/etc/promtail/promtail-config.yml:/etc/promtail/config.yml:ro,Z \
+              docker.io/grafana/promtail:latest \
+              -config.file=/etc/promtail/config.yml
+            
+            # Check status and logs
+            echo 'Container status:'
+            podman ps -a
+            echo 'API logs:'
+            podman logs timeherenow-container || true
+            echo 'Nginx logs:'
+            podman logs timeherenow-nginx || true
+            echo 'Promtail logs:'
+            podman logs timeherenow-promtail || true
+          "

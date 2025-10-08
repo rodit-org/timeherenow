@@ -220,20 +220,4 @@ router.put('/sign/hash', async (req, res) => {
   }
 });
 
-/**
- * PUT /near-health - NEAR RPC health check endpoint
- */
-router.put('/near-health', async (req, res) => {
-  try {
-    const healthStatus = await timezoneService.healthCheck();
-    res.json(healthStatus);
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
 module.exports = router;

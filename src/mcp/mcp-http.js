@@ -17,7 +17,7 @@ const logger = require('../../sdk/services/logger');
  */
 async function setupMcpHttpTransport(app) {
   const mcpServer = new McpServer({
-    name: 'Discernible.io MCP',
+    name: 'timeherenow.com MCP',
     version: '1.0.0',
     instructions: 'Use these tools via MCP streamable HTTP transport.'
   });

@@ -138,8 +138,7 @@
           "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
-    }
-  ,
+    },
     "/sign/hash": {
       "put": {
         "summary": "Sign a base64url-encoded hash concatenated with the latest NEAR timestamp, likely_time_difference_ms, and public key.",
@@ -172,15 +171,19 @@
         }
       }
     },
-    "/near-health": {
-      "put": {
-        "summary": "NEAR RPC health check",
+    "/health": {
+      "servers": [
+        { "url": "https://timeherenow.rodit.org" },
+        { "url": "http://localhost:3000" }
+      ],
+      "get": {
+        "summary": "Server health (includes NEAR status)",
         "responses": {
           "200": {
-            "description": "NEAR RPC health status",
+            "description": "Health status",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/NearHealthResponse" }
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
               }
             }
           },
@@ -323,6 +326,16 @@
           "likely_time_difference_ms": { "type": "integer", "nullable": true }
         }
       },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "timestamp", "service"],
+        "properties": {
+          "status": { "type": "string" },
+          "timestamp": { "type": "string" },
+          "service": { "type": "string" },
+          "near": { "$ref": "#/components/schemas/NearHealthResponse" }
+        }
+      },
       "ErrorJsonResponse": {
         "type": "object",
         "required": [
@@ -355,3 +368,4 @@
       }
     }
   }
+}

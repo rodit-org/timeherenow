@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fix ownership, permissions, and SELinux labels for clienttestapi-rodit rootless Podman volumes
+# Fix ownership, permissions, and SELinux labels for timeherenow-rodit rootless Podman volumes
 # Usage: ./fix-permissions.sh [APP_DIR]
 # If APP_DIR is not provided, defaults to the repository root where this script lives
 
@@ -81,5 +81,5 @@ Fixed permissions for: ${APP_DIR}
 - promtail: $(stat -c "%A %U:%G" "${PROMTAIL_DIR}" 2>/dev/null || echo "exists")
 
 If containers are running, consider restarting promtail after changes:
-  podman restart clienttestapi-promtail || true
+  podman restart timeherenow-promtail || true
 EOF
