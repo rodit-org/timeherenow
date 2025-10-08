@@ -53,21 +53,115 @@ The API uses a unique identifier generation system based on facial feature combi
 - **Request Tracking**: Generates unique request IDs for logging and debugging
 - **Session Management**: Creates traceable identifiers for API operations
 
-### API Endpoints
 
 #### Quick Reference for Frontend Integration
 
 **Base URL**: `https://timeherenow.rodit.org:8443`
 
 **Available Endpoints**:
-- `POST /login` - Authentication (no auth required)
-- `POST /logout` - Logout (requires auth)
+- `POST /api/login` - Authentication (no auth required)
+- `POST /api/logout` - Logout (requires auth)
 - `GET /health` - Health check
 - `GET /api-docs` - API documentation
+- `PUT /api/timezone` - List all IANA timezones
+- `PUT /api/timezone/area` - List timezones for a given area
+- `PUT /api/timezone/time` - Get current time for a timezone (or by client IP)
+- `PUT /api/timezones/by-country` - List timezones by ISO country code
+- `PUT /api/ip` - Get current time by IP (IPv4 or IPv6)
+- `PUT /api/near-health` - NEAR RPC health check
 
-**Authentication**: Most endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/login`.
+**Authentication**: Most endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.
 
----
+**DateTimeJsonResponse**:
+```json
+{
+  "user_ip": "203.0.113.10",
+  "date_time": "2025-10-08T10:57:01.123+02:00",
+  "day_of_week": 3,
+  "day_of_year": 281,
+  "dst_trueorfalse": true,
+  "dst_offset": 3600,
+  "time_zone": "Europe/Berlin",
+  "unix_time": 175,
+  "utc_datetime": "2025-10-08T08:57:01.123Z",
+  "utc_offset": "+02:00",
+  "week_number": 41,
+  "raw_offset": 3600,
+  "locale": "de-DE"
+}
+```
+Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `day_of_week`, `day_of_year`, `dst_trueorfalse`, `dst_offset`, `time_zone`, `unix_time`, `utc_datetime`, `utc_offset`, `week_number`.
+`raw_offset` (seconds) and `locale` are also returned for convenience but are not required.
+
+**IANA Time Zone Database (tzdb)**:
+#### Time Endpoints
+
+- **PUT `/api/timezone`**
+  - Response: `string[]` of IANA tzdb IDs, e.g., `"Europe/Berlin"`, `"America/Indiana/Knox"`.
+
+- **PUT `/api/timezone/area`**
+  - Request:
+    ```json
+    { "area": "America" }
+    ```
+  - Response: `string[]` of timezones beginning with `"America/"`.
+
+- **PUT `/api/timezones/by-country`**
+  - Request:
+    ```json
+    { "country_code": "US" }
+    ```
+  - Response: `string[]` of timezones for the ISO 3166-1 alpha-2 code.
+
+- **PUT `/api/timezone/time`** (preferred) and legacy segmented params
+  - Request (preferred):
+    ```json
+    { "timezone": "Europe/Berlin", "locale": "de-DE" }
+    ```
+  - Legacy request (supported):
+    ```json
+    { "area": "America", "location": "Indiana", "region": "Knox", "locale": "en-US" }
+    ```
+  - Response (DateTimeJsonResponse):
+    ```json
+    {
+      "user_ip": "203.0.113.10",
+      "date_time": "2025-10-08T10:57:01.123+02:00",
+      "day_of_week": 3,
+      "day_of_year": 281,
+      "dst_trueorfalse": true,
+      "dst_offset": 3600,
+      "time_zone": "Europe/Berlin",
+      "unix_time": 175, 
+      "utc_datetime": "2025-10-08T08:57:01.123Z",
+      "utc_offset": "+02:00",
+      "week_number": 41,
+      "raw_offset": 3600,
+      "locale": "de-DE"
+    }
+    ```
+    - Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `day_of_week`, `day_of_year`, `dst_trueorfalse`, `dst_offset`, `time_zone`, `unix_time`, `utc_datetime`, `utc_offset`, `week_number`.
+    - `raw_offset` (seconds) and `locale` are also returned for convenience but are not required.
+
+- **PUT `/api/ip`**
+  - Request (optional IP; falls back to client IP):
+    ```json
+    { "ip": "2001:db8::1", "locale": "en-GB" }
+    ```
+  - Response: DateTimeJsonResponse (same as above), using timezone resolved from the IP.
+
+- **PUT `/api/near-health`**
+  - Response:
+    ```json
+    { "status": "healthy", "endpoint": "https://rpc.mainnet.near.org", "timestamp": "2025-10-08T10:57:01.000Z" }
+    ```
+
+##### Time zone data sourcing
+- Time zones are sourced from the IANA Time Zone Database (tzdb). See `api-docs/swagger.json` `externalDocs` referencing IANA.
+- This project uses `@vvo/tzdb` to access tzdb data.
+- Update tzdb:
+  - `npm run update-tzdata` (uses `scripts/update-tzdata.sh`)
+  - Check version/count: `npm run tz:version`
 
 #### Authentication Endpoints
 

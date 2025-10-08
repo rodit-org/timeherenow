@@ -155,13 +155,9 @@ async function startServer() {
         service: SERVICE_NAME,
         endpoints: [
           { method: 'PUT', path: '/api/timezone', description: 'List all timezones (JSON)' },
-          { method: 'PUT', path: '/api/timezone.txt', description: 'List all timezones (Text)' },
           { method: 'PUT', path: '/api/timezone/area', description: 'List timezones for area' },
-          { method: 'PUT', path: '/api/timezone/area.txt', description: 'List timezones for area (Text)' },
           { method: 'PUT', path: '/api/timezone/time', description: 'Get time for timezone' },
-          { method: 'PUT', path: '/api/timezone/time.txt', description: 'Get time for timezone (Text)' },
           { method: 'PUT', path: '/api/ip', description: 'Get time based on IP' },
-          { method: 'PUT', path: '/api/ip.txt', description: 'Get time based on IP (Text)' },
           { method: 'PUT', path: '/api/near-health', description: 'NEAR RPC health check' },
           { method: 'GET', path: '/health', description: 'Health check' },
           { method: 'GET', path: '/api-docs', description: 'API documentation' }

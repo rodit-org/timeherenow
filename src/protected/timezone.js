@@ -2,6 +2,7 @@
 // Time Here Now - API Routes
 
 const express = require('express');
+const net = require('net');
 const router = express.Router();
 const TimeZoneService = require('../lib/timezone-service');
 
@@ -14,20 +15,26 @@ const logger = {
 // Initialize timezone service
 const timezoneService = new TimeZoneService();
 
-/**
- * Helper function to get client IP
- */
-function getClientIP(req) {
-  return req.ip || 
-         req.connection.remoteAddress || 
-         req.socket.remoteAddress ||
-         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-         '0.0.0.0';
-}
+  function getClientIP(req) {
+    return req.ip || 
+          req.connection.remoteAddress || 
+          req.socket.remoteAddress ||
+          (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+          '0.0.0.0';
+  }
 
-/**
- * Helper function to handle errors consistently
- */
+  /**
+   * Helper to resolve locale from body or Accept-Language header
+   */
+  function getLocale(req) {
+    const bodyLocale = (req.body && req.body.locale) ? String(req.body.locale) : null;
+    const headerLocale = req.headers && (req.headers['accept-language'] || req.headers['Accept-Language']);
+    return bodyLocale || headerLocale || 'en';
+  }
+
+  /**
+   * Helper function to handle errors consistently
+   */
 function handleError(res, error, format = 'json') {
   logger.error('TimeZone API Error:', {
     error: error.message,
@@ -43,39 +50,28 @@ function handleError(res, error, format = 'json') {
   }
 }
 
-/**
- * PUT /timezone - List all timezones (JSON)
- */
-router.put('/timezone', (req, res) => {
-  try {
-    const timezones = timezoneService.getAllTimezones();
-    res.json(timezones);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
+  /**
+   * PUT /timezone - List all timezones (JSON)
+   */
+  router.put('/timezone', async (req, res) => {
+    try {
+      const timezones = await timezoneService.getAllTimezones();
+      res.json(timezones);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
 
-/**
- * PUT /timezone.txt - List all timezones (Plain text)
- */
-router.put('/timezone.txt', (req, res) => {
-  try {
-    const timezones = timezoneService.getAllTimezones();
-    const textResponse = timezoneService.formatTimezonesAsText(timezones);
-    res.type('text/plain').send(textResponse);
-  } catch (error) {
-    handleError(res, error, 'text');
-  }
-});
+  
 
-/**
- * PUT /timezone/area - List timezones for specific area (JSON)
- * Body: { area: string }
- */
-router.put('/timezone/area', (req, res) => {
+  /**
+   * PUT /timezone/area - List timezones for specific area (JSON)
+   * Body: { area: string }
+   */
+  router.put('/timezone/area', async (req, res) => {
   try {
     const { area } = req.body || {};
-    const timezones = timezoneService.getTimezonesByArea(area);
+    const timezones = await timezoneService.getTimezonesByArea(area);
     
     if (timezones.length === 0) {
       throw new Error(`Unknown area: ${area}`);
@@ -87,77 +83,70 @@ router.put('/timezone/area', (req, res) => {
   }
 });
 
-/**
- * PUT /timezone/area.txt - List timezones for specific area (Plain text)
- * Body: { area: string }
- */
-router.put('/timezone/area.txt', (req, res) => {
-  try {
-    const { area } = req.body || {};
-    const timezones = timezoneService.getTimezonesByArea(area);
-    
-    if (timezones.length === 0) {
-      throw new Error(`Unknown area: ${area}`);
-    }
-    
-    const textResponse = timezoneService.formatTimezonesAsText(timezones);
-    res.type('text/plain').send(textResponse);
-  } catch (error) {
-    handleError(res, error, 'text');
-  }
-});
+  
 
 /**
  * PUT /timezone/time - Get current time for timezone (JSON)
- * Body: { area: string, location: string, region?: string }
+ * Preferred Body: { timezone: string, locale?: string }
+ * Legacy Body (supported as fallback): { area: string, location: string, region?: string, locale?: string }
  */
 router.put('/timezone/time', async (req, res) => {
   try {
-    const { area, location, region } = req.body || {};
-    const timezone = timezoneService.validateTimezoneParams(area, location, region);
+    const { timezone: tzFromBody, area, location, region } = req.body || {};
     const clientIP = getClientIP(req);
-    const timeData = await timezoneService.getTimeDataForTimezone(timezone, clientIP);
-    
+    const locale = getLocale(req);
+    let timezone = tzFromBody;
+    if (!timezone) {
+      if (area && location) {
+        // Legacy segmented params
+        timezone = await timezoneService.validateTimezoneParams(area, location, region);
+      } else {
+        // Fallback to user IP derived timezone
+        timezone = timezoneService.getTimezoneForIP(clientIP);
+      }
+    }
+    const timeData = await timezoneService.getTimeDataForTimezone(timezone, clientIP, locale);
     res.json(timeData);
   } catch (error) {
     handleError(res, error);
   }
 });
 
-/**
- * PUT /timezone/time.txt - Get current time for timezone (Plain text)
- * Body: { area: string, location: string, region?: string }
- */
-router.put('/timezone/time.txt', async (req, res) => {
-  try {
-    const { area, location, region } = req.body || {};
-    const timezone = timezoneService.validateTimezoneParams(area, location, region);
-    const clientIP = getClientIP(req);
-    const timeData = await timezoneService.getTimeDataForTimezone(timezone, clientIP);
-    const textResponse = timezoneService.formatAsText(timeData);
-    
-    res.type('text/plain').send(textResponse);
-  } catch (error) {
-    handleError(res, error, 'text');
-  }
-});
+  /**
+   * PUT /timezones/by-country - List timezones by ISO 3166-1 alpha-2 country code
+   * Body: { country_code: string }
+   */
+  router.put('/timezones/by-country', async (req, res) => {
+    try {
+      const { country_code } = req.body || {};
+      const list = await timezoneService.getTimezonesByCountryCode(country_code);
+      if (!list || list.length === 0) {
+        throw new Error(`Unknown or unsupported country code: ${country_code}`);
+      }
+      res.json(list);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
 
-// Region-specific routes consolidated into /timezone/time and /timezone/time.txt via JSON body
+  
+
+// Region-specific routes consolidated into /timezone/time via JSON body
 
 /**
- * PUT /ip - Get current time based on client IP or specified IP (JSON)
- * Body: { ipv4?: string }
+ * PUT /ip - Get current time based on the user IP or specified IP (IPv4 or IPv6) (JSON)
+ * Body: { ip?: string }
  */
 router.put('/ip', async (req, res) => {
   try {
-    const { ipv4 } = req.body || {};
-    const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    if (ipv4 && !ipPattern.test(ipv4)) {
-      throw new Error(`Invalid IPv4 address: ${ipv4}`);
+    const { ip } = req.body || {};
+    if (ip && net.isIP(String(ip).trim()) === 0) {
+      throw new Error(`Invalid IP address: ${ip}`);
     }
-    const sourceIP = ipv4 && ipv4.trim() !== '' ? ipv4 : getClientIP(req);
+    const sourceIP = ip && String(ip).trim() !== '' ? String(ip).trim() : getClientIP(req);
     const timezone = timezoneService.getTimezoneForIP(sourceIP);
-    const timeData = await timezoneService.getTimeDataForTimezone(timezone, sourceIP);
+    const locale = getLocale(req);
+    const timeData = await timezoneService.getTimeDataForTimezone(timezone, sourceIP, locale);
     
     res.json(timeData);
   } catch (error) {
@@ -165,27 +154,7 @@ router.put('/ip', async (req, res) => {
   }
 });
 
-/**
- * PUT /ip.txt - Get current time based on client IP or specified IP (Plain text)
- * Body: { ipv4?: string }
- */
-router.put('/ip.txt', async (req, res) => {
-  try {
-    const { ipv4 } = req.body || {};
-    const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    if (ipv4 && !ipPattern.test(ipv4)) {
-      throw new Error(`Invalid IPv4 address: ${ipv4}`);
-    }
-    const sourceIP = ipv4 && ipv4.trim() !== '' ? ipv4 : getClientIP(req);
-    const timezone = timezoneService.getTimezoneForIP(sourceIP);
-    const timeData = await timezoneService.getTimeDataForTimezone(timezone, sourceIP);
-    const textResponse = timezoneService.formatAsText(timeData);
-    
-    res.type('text/plain').send(textResponse);
-  } catch (error) {
-    handleError(res, error, 'text');
-  }
-});
+  
 
 // IP-by-parameter routes consolidated into /ip and /ip.txt via JSON body
 

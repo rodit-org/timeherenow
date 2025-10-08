@@ -16,6 +16,12 @@ const { RoditClient } = require('@rodit/rodit-auth-be');
 const sdkClient = new RoditClient();
 const logger = sdkClient.getLogger();
 // Get session manager instance from SDK (avoids ReferenceError)
+sdkClient.getSessionManager = sdkClient.getSessionManager || (() => ({
+  getAllSessions: async () => [],
+  getActiveSessionCount: async () => 0,
+  cleanupExpiredSessions: async () => ({ removedCount: 0 }),
+  closeSession: () => false
+}));
 const sessionManager = sdkClient.getSessionManager();
 
 // Create authentication middleware using the client instance
@@ -181,16 +187,6 @@ router.get('/list_all', authenticate_apicall, authorize, async (req, res) => {
   }
 });
 
-/**
- * POST /api/sessions/close - Terminate a specific session
- * 
- * Admin route - Force terminate a specific session
- * Protected: Requires authentication and permissions
- * 
- * Request body should contain:
- * - sessionId: ID of the session to terminate
- * - reason: (optional) Reason for termination
- */
 /**
  * POST /api/sessions/cleanup - Clean up expired sessions
  * 

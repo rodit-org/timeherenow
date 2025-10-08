@@ -3,13 +3,16 @@
   "info": {
     "title": "Time Here Now API",
     "version": "20251007",
-    "description": "API to get the current time based on timezone or client IP."
+    "description": "API to get the current time based on timezone or client IP. Time zones and offsets are sourced from the IANA Time Zone Database (tzdb)."
   },
   "servers": [
-    {
-      "url": "http://timeherenow.com/api/"
-    }
+    { "url": "https://timeherenow.rodit.org:8443/api" },
+    { "url": "http://localhost:3000/api" }
   ],
+  "externalDocs": {
+    "description": "IANA Time Zone Database (tzdb)",
+    "url": "https://www.iana.org/time-zones"
+  },
   "paths": {
     "/timezone": {
       "put": {
@@ -21,16 +24,7 @@
         }
       }
     },
-    "/timezone.txt": {
-      "put": {
-        "summary": "a listing of all timezones.",
-        "responses": {
-          "default": {
-            "$ref": "#/components/responses/SuccessfulListTextResponse"
-          }
-        }
-      }
-    },
+    
     "/timezone/area": {
       "put": {
         "summary": "a listing of all timezones available for that area.",
@@ -54,43 +48,22 @@
         }
       }
     },
-    "/timezone/area.txt": {
-      "put": {
-        "summary": "a listing of all timezones available for that area.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["area"],
-                "properties": {
-                  "area": { "type": "string" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "$ref": "#/components/responses/SuccessfulListTextResponse" },
-          "default": { "$ref": "#/components/responses/ErrorTextResponse" }
-        }
-      }
-    },
+    
     "/timezone/time": {
       "put": {
-        "summary": "request the current time for a timezone.",
+        "summary": "request the current time for a timezone (falls back to user IP if timezone is omitted).",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["area", "location"],
                 "properties": {
-                  "area": { "type": "string" },
-                  "location": { "type": "string" },
-                  "region": { "type": "string" }
+                  "timezone": { "type": "string", "description": "IANA tzdb ID, e.g., Europe/Berlin or America/Indiana/Knox. If omitted, server will determine timezone from the user's IP." },
+                  "locale": { "type": "string", "description": "Optional IETF BCP 47 locale tag or Accept-Language value to localize names and datetime" },
+                  "area": { "type": "string", "deprecated": true, "description": "Legacy segmented parameter for timezone area. Prefer 'timezone'." },
+                  "location": { "type": "string", "deprecated": true, "description": "Legacy segmented parameter for timezone location. Prefer 'timezone'." },
+                  "region": { "type": "string", "deprecated": true, "description": "Legacy segmented parameter for timezone region. Prefer 'timezone'." }
                 }
               }
             }
@@ -102,220 +75,34 @@
         }
       }
     },
-    "/timezone/time.txt": {
+    "/timezones/by-country": {
       "put": {
-        "summary": "request the current time for a timezone.",
+        "summary": "list timezones by ISO 3166-1 alpha-2 country code",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["area", "location"],
+                "required": ["country_code"],
                 "properties": {
-                  "area": { "type": "string" },
-                  "location": { "type": "string" },
-                  "region": { "type": "string" }
+                  "country_code": { "type": "string", "description": "ISO 3166-1 alpha-2 country code, e.g., US, DE, IN" }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/SuccessfulDateTimeTextResponse" },
-          "default": { "$ref": "#/components/responses/ErrorTextResponse" }
+          "200": { "$ref": "#/components/responses/SuccessfulListJsonResponse" },
+          "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
     },
-    "/timezone/{area}": {
-      "get": {
-        "summary": "a listing of all timezones available for that area.",
-        "parameters": [
-          {
-            "name": "area",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulListJsonResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorJsonResponse"
-          }
-        }
-      }
-    },
-    "/timezone/{area}.txt": {
-      "get": {
-        "summary": "a listing of all timezones available for that area.",
-        "parameters": [
-          {
-            "name": "area",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulListTextResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorTextResponse"
-          }
-        }
-      }
-    },
-    "/timezone/{area}/{location}": {
-      "get": {
-        "summary": "request the current time for a timezone.",
-        "parameters": [
-          {
-            "name": "area",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "location",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorJsonResponse"
-          }
-        }
-      }
-    },
-    "/timezone/{area}/{location}.txt": {
-      "get": {
-        "summary": "request the current time for a timezone.",
-        "parameters": [
-          {
-            "name": "area",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "location",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulDateTimeTextResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorTextResponse"
-          }
-        }
-      }
-    },
-    "/timezone/{area}/{location}/{region}": {
-      "get": {
-        "summary": "request the current time for a timezone.",
-        "parameters": [
-          {
-            "name": "area",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "location",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "region",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorJsonResponse"
-          }
-        }
-      }
-    },
-    "/timezone/{area}/{location}/{region}.txt": {
-      "get": {
-        "summary": "request the current time for a timezone.",
-        "parameters": [
-          {
-            "name": "area",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "location",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "region",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulDateTimeTextResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorTextResponse"
-          }
-        }
-      }
-    },
+    
+    
     "/ip": {
       "put": {
-        "summary": "request the current time based on the ip of the request or provided IPv4.",
+        "summary": "request the current time based on the ip of the request or provided IP (IPv4 or IPv6).",
         "requestBody": {
           "required": false,
           "content": {
@@ -323,7 +110,8 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "ipv4": { "type": "string", "description": "Optional IPv4 address" }
+                  "ip": { "type": "string", "description": "Optional IPv4 or IPv6 address" },
+                  "locale": { "type": "string", "description": "Optional IETF BCP 47 locale tag or Accept-Language value to localize names and datetime" }
                 }
               }
             }
@@ -334,72 +122,21 @@
           "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
-    },
-    "/ip.txt": {
+    }
+  ,
+    "/near-health": {
       "put": {
-        "summary": "request the current time based on the ip of the request or provided IPv4.",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "ipv4": { "type": "string", "description": "Optional IPv4 address" }
-                }
+        "summary": "NEAR RPC health check",
+        "responses": {
+          "200": {
+            "description": "NEAR RPC health status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NearHealthResponse" }
               }
             }
-          }
-        },
-        "responses": {
-          "200": { "$ref": "#/components/responses/SuccessfulDateTimeTextResponse" },
-          "default": { "$ref": "#/components/responses/ErrorTextResponse" }
-        }
-      }
-    },
-    "/ip/{ipv4}": {
-      "get": {
-        "summary": "request the current time based on the ip of the request. note: this is a \"best guess\" obtained from open-source data.",
-        "parameters": [
-          {
-            "name": "ipv4",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulDateTimeJsonResponse"
           },
-          "default": {
-            "$ref": "#/components/responses/ErrorJsonResponse"
-          }
-        }
-      }
-    },
-    "/ip/{ipv4}.txt": {
-      "get": {
-        "summary": "request the current time based on the ip of the request. note: this is a \"best guess\" obtained from open-source data.",
-        "parameters": [
-          {
-            "name": "ipv4",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SuccessfulDateTimeTextResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorTextResponse"
-          }
+          "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
     }
@@ -416,32 +153,12 @@
           }
         }
       },
-      "SuccessfulListTextResponse": {
-        "description": "the list of available timezones in plain text",
-        "content": {
-          "text/plain": {
-            "schema": {
-              "$ref": "#/components/schemas/ListTextResponse"
-            }
-          }
-        }
-      },
       "SuccessfulDateTimeJsonResponse": {
         "description": "the current time for the timezone requested in JSON format",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/DateTimeJsonResponse"
-            }
-          }
-        }
-      },
-      "SuccessfulDateTimeTextResponse": {
-        "description": "the current time for the timezone requested in plain text",
-        "content": {
-          "text/plain": {
-            "schema": {
-              "$ref": "#/components/schemas/DateTimeTextResponse"
             }
           }
         }
@@ -455,16 +172,6 @@
             }
           }
         }
-      },
-      "ErrorTextResponse": {
-        "description": "an error response in plain text",
-        "content": {
-          "text/plain": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorTextResponse"
-            }
-          }
-        }
       }
     },
     "schemas": {
@@ -475,72 +182,59 @@
           "type": "string"
         }
       },
-      "ListTextResponse": {
-        "type": "string",
-        "description": "a list of available timezones, one per line"
-      },
       "DateTimeJsonResponse": {
         "type": "object",
         "required": [
-          "abbreviation",
-          "client_ip",
-          "datetime",
+          "user_ip",
+          "date_time",
           "day_of_week",
           "day_of_year",
-          "dst",
+          "dst_trueorfalse",
           "dst_offset",
-          "timezone",
-          "unixtime",
+          "time_zone",
+          "unix_time",
           "utc_datetime",
           "utc_offset",
           "week_number"
         ],
         "properties": {
-          "abbreviation": {
+          "user_ip": {
             "type": "string",
-            "description": "the abbreviated name of the timezone"
+            "description": "the IP address of the user making the request (IPv4 or IPv6)"
           },
-          "client_ip": {
-            "type": "string",
-            "description": "the IP of the client making the request"
-          },
-          "datetime": {
+          "date_time": {
             "type": "string",
             "description": "an ISO8601-valid string representing the current, local date/time"
           },
           "day_of_week": {
             "type": "integer",
-            "description": "current day number of the week, where sunday is 0"
+            "description": "ISO 8601 day number of the week (Monday=1 .. Sunday=7)"
           },
           "day_of_year": {
             "type": "integer",
             "description": "ordinal date of the current year"
           },
-          "dst": {
+          "dst_trueorfalse": {
             "type": "boolean",
             "description": "flag indicating whether the local time is in daylight savings"
-          },
-          "dst_from": {
-            "type": "string",
-            "description": "an ISO8601-valid string representing the datetime when daylight savings started for this timezone"
           },
           "dst_offset": {
             "type": "integer",
             "description": "the difference in seconds between the current local time and daylight saving time for the location"
           },
-          "dst_until": {
-            "type": "string",
-            "description": "an ISO8601-valid string representing the datetime when daylight savings will end for this timezone"
-          },
           "raw_offset": {
             "type": "integer",
             "description": "the difference in seconds between the current local time and the time in UTC, excluding any daylight saving difference (see dst_offset)"
           },
-          "timezone": {
+          "time_zone": {
             "type": "string",
             "description": "timezone in `Area/Location` or `Area/Location/Region` format"
           },
-          "unixtime": {
+          "locale": {
+            "type": "string",
+            "description": "resolved locale used for localization"
+          },
+          "unix_time": {
             "type": "integer",
             "description": "number of seconds since the Epoch"
           },
@@ -558,9 +252,15 @@
           }
         }
       },
-      "DateTimeTextResponse": {
-        "type": "string",
-        "description": "time zone details, as per the DateTimeJsonResponse response, in the format `key: value` , one item per line"
+      "NearHealthResponse": {
+        "type": "object",
+        "required": ["status", "timestamp"],
+        "properties": {
+          "status": { "type": "string", "enum": ["healthy", "unhealthy"] },
+          "endpoint": { "type": "string" },
+          "error": { "type": "string" },
+          "timestamp": { "type": "string", "description": "ISO 8601 timestamp" }
+        }
       },
       "ErrorJsonResponse": {
         "type": "object",
@@ -573,10 +273,6 @@
             "description": "details about the error encountered"
           }
         }
-      },
-      "ErrorTextResponse": {
-        "type": "string",
-        "description": "details about the error encountered in plain text"
       }
     }
   }

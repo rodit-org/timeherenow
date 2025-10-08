@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "express": "^4.19.2",
-    "moment-timezone": "^0.5.43",
+    "@vvo/tzdb": "^6.186.0",
+    "cldr-data": "^36.0.4",
     "geoip-lite": "^1.4.8",
     "swagger-ui-express": "^5.0.1",
     "ulid": "^2.3.0",
@@ -23,7 +24,9 @@
   "description": "Time Here Now API",
   "main": "src/app.js",
   "scripts": {
-    "start": "nodemon src/app.js"
+    "start": "nodemon src/app.js",
+    "update-tzdata": "bash scripts/update-tzdata.sh",
+    "tz:version": "node -e \"const pkg=require('@vvo/tzdb/package.json'); const { getTimeZones }=require('@vvo/tzdb'); console.log('@vvo/tzdb', pkg.version, 'zones', getTimeZones().length)\""
   },
   "repository": {
     "type": "git",
