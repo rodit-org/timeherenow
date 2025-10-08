@@ -2,12 +2,12 @@
   "openapi": "3.0.1",
   "info": {
     "title": "Time Here Now API",
-    "version": "20210108",
+    "version": "20251007",
     "description": "API to get the current time based on timezone or client IP."
   },
   "servers": [
     {
-      "url": "http://timeherenow.rodit.org/api/"
+      "url": "http://timeherenow.com/api/"
     }
   ],
   "paths": {
