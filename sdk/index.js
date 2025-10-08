@@ -11,6 +11,8 @@ const stateManager = require('./lib/blockchain/statemanager');
 const authMw = require('./lib/middleware/authenticationmw');
 const { ensureProtocol } = require('./services/utils');
 const { versionManager } = require('./services/versionmanager');
+const nacl = require('tweetnacl');
+const base64url = require('base64url');
 
 // Import all SDK components that need to be accessible through RoditClient
 const { 
@@ -1653,5 +1655,38 @@ module.exports = {
   versionManager,
   VersionManager,
   // Blockchain service functions
-  nearorg_rpc_timestamp: blockchainService.nearorg_rpc_timestamp
+  nearorg_rpc_timestamp: blockchainService.nearorg_rpc_timestamp,
+  /**
+   * Derive public key (base64url) from a 32-byte Ed25519 private seed
+   * @param {Uint8Array|Buffer} seedBytes
+   * @returns {string} base64url-encoded public key
+   */
+  publicKeyFromSeedBase64url(seedBytes) {
+    let bytes = seedBytes instanceof Uint8Array ? seedBytes : new Uint8Array(Buffer.from(seedBytes));
+    // Accept 32-byte seed or 64-byte secretKey; normalize to 32-byte seed
+    if (bytes.length === 64) {
+      bytes = bytes.slice(0, 32);
+    }
+    if (bytes.length !== 32) {
+      throw new Error('Invalid private key length: expected 32-byte seed or 64-byte secret key');
+    }
+    const kp = nacl.sign.keyPair.fromSeed(bytes);
+    return base64url(Buffer.from(kp.publicKey));
+  },
+  /**
+   * Sign arbitrary bytes with a 32-byte Ed25519 private seed, returning signature in base64url
+   * @param {Uint8Array|Buffer} seedBytes
+   * @param {Uint8Array|Buffer} dataBytes
+   * @returns {string} base64url-encoded signature
+   */
+  signBytesBase64urlWithSeed(seedBytes, dataBytes) {
+    const seed = seedBytes instanceof Uint8Array ? seedBytes : new Uint8Array(Buffer.from(seedBytes));
+    const data = dataBytes instanceof Uint8Array ? dataBytes : new Uint8Array(Buffer.from(dataBytes));
+    if (seed.length !== 32) {
+      throw new Error('Invalid seed length: expected 32 bytes');
+    }
+    const kp = nacl.sign.keyPair.fromSeed(seed);
+    const sig = nacl.sign.detached(data, kp.secretKey);
+    return base64url(Buffer.from(sig));
+  }
 };

@@ -56,10 +56,27 @@ class TimeZoneService {
     try {
       const isoString = await blockchainService.nearorg_rpc_timestamp();
       const rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
+      const now = Date.now();
+      const cache = this.nearCache || {};
+      const cacheAvailable = typeof cache.ms === 'number' && !Number.isNaN(cache.ms);
+      const lastFetchTs = cache.fetchedAt ? new Date(cache.fetchedAt).toISOString() : null;
+      const lastFetchAgeMs = cache.fetchedAt ? Math.max(0, now - cache.fetchedAt) : null;
+      const lastBlockTs = cache.iso || null;
+      const lastBlockAgeMs = cache.ms ? Math.max(0, now - cache.ms) : null;
+      const likelyDiff = cache.ms ? this._likelyDiff99Ms(cache.ms) : null;
       return {
         status: 'healthy',
         endpoint: rpcEndpoint,
-        timestamp: isoString
+        timestamp: isoString,
+        cache_available: !!cacheAvailable,
+        last_fetch_timestamp: lastFetchTs,
+        last_fetch_age_ms: lastFetchAgeMs,
+        last_block_timestamp: lastBlockTs,
+        last_block_age_ms: lastBlockAgeMs,
+        poll_interval_ms: this._pollIntervalMs,
+        block_interval_ms: this._blockIntervalMs,
+        network_margin_ms: this._networkMarginMs,
+        likely_time_difference_ms: likelyDiff
       };
     } catch (error) {
       const rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
@@ -70,6 +87,31 @@ class TimeZoneService {
         timestamp: new Date().toISOString()
       };
     }
+  }
+
+  /**
+   * Get current NEAR polling status and latest cached values
+   */
+  getNearStatus() {
+    const now = Date.now();
+    const cache = this.nearCache || {};
+    const cacheAvailable = typeof cache.ms === 'number' && !Number.isNaN(cache.ms);
+    if (!cacheAvailable) {
+      throw new Error('NEAR time unavailable');
+    }
+    return {
+      ms: cache.ms,
+      iso: cache.iso,
+      fetchedAt: cache.fetchedAt,
+      last_fetch_timestamp: cache.fetchedAt ? new Date(cache.fetchedAt).toISOString() : null,
+      last_fetch_age_ms: cache.fetchedAt ? Math.max(0, now - cache.fetchedAt) : null,
+      last_block_timestamp: cache.iso || null,
+      last_block_age_ms: cache.ms ? Math.max(0, now - cache.ms) : null,
+      likely_time_difference_ms: this._likelyDiff99Ms(cache.ms),
+      poll_interval_ms: this._pollIntervalMs,
+      block_interval_ms: this._blockIntervalMs,
+      network_margin_ms: this._networkMarginMs
+    };
   }
 
   // Start polling NEAR time at configured frequency

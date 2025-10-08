@@ -17,7 +17,9 @@
     "swagger-jsdoc": "^6.2.8",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "winston-loki": "^6.1.3"
+    "winston-loki": "^6.1.3",
+    "tweetnacl": "^1.0.3",
+    "base64url": "^3.0.1"
   },
   "name": "timeherenow",
   "version": "1.0.0",

@@ -4,6 +4,8 @@
 const express = require('express');
 const net = require('net');
 const router = express.Router();
+const base64url = require('base64url');
+const sdk = require('../../sdk');
 const TimeZoneService = require('../lib/timezone-service');
 
 // Simple logger fallback
@@ -132,13 +134,12 @@ router.put('/timezone/time', async (req, res) => {
 
   
 
-// Region-specific routes consolidated into /timezone/time via JSON body
 
 /**
  * PUT /ip - Get current time based on the user IP or specified IP (IPv4 or IPv6) (JSON)
  * Body: { ip?: string }
  */
-router.put('/ip', async (req, res) => {
+  router.put('/ip', async (req, res) => {
   try {
     const { ip } = req.body || {};
     if (ip && net.isIP(String(ip).trim()) === 0) {
@@ -158,6 +159,66 @@ router.put('/ip', async (req, res) => {
   
 
 // IP-by-parameter routes consolidated into /ip and /ip.txt via JSON body
+
+/**
+ * PUT /sign/hash - Sign provided base64url-encoded hash concatenated with NEAR time, likely diff and public key
+ * Body: { hash_b64url: string }
+ */
+router.put('/sign/hash', async (req, res) => {
+  try {
+    const { hash_b64url } = req.body || {};
+    if (!hash_b64url || typeof hash_b64url !== 'string') {
+      return res.status(400).json({ error: 'hash_b64url is required' });
+    }
+    let hashBytes;
+    try {
+      hashBytes = base64url.toBuffer(hash_b64url);
+    } catch (e) {
+      return res.status(400).json({ error: 'hash_b64url must be valid base64url' });
+    }
+    // Reasonable upper limit for hash input
+    if (hashBytes.length === 0 || hashBytes.length > 128) {
+      return res.status(400).json({ error: 'hash_b64url decoded length must be between 1 and 128 bytes' });
+    }
+
+    // Get latest NEAR status from cache (throws if unavailable)
+    const status = timezoneService.getNearStatus();
+    const timestamp_iso = status.iso;
+    const likely_time_difference_ms = status.likely_time_difference_ms;
+
+    // Get private seed bytes from RoditClient config
+    if (!req.app.locals.roditClient || typeof req.app.locals.roditClient.getConfigOwnRodit !== 'function') {
+      return res.status(503).json({ error: 'Signing service unavailable' });
+    }
+    const configObject = await req.app.locals.roditClient.getConfigOwnRodit();
+    if (!configObject || !configObject.own_rodit_bytes_private_key) {
+      return res.status(503).json({ error: 'Signing key unavailable' });
+    }
+    const seedBytes = configObject.own_rodit_bytes_private_key;
+
+    // Derive public key and sign using local SDK helpers
+    const public_key_base64url = sdk.publicKeyFromSeedBase64url(seedBytes);
+    const concatenated = `${hash_b64url}.${timestamp_iso}.${likely_time_difference_ms}.${public_key_base64url}`;
+    const signature_base64url = sdk.signBytesBase64urlWithSeed(seedBytes, Buffer.from(concatenated, 'utf8'));
+
+    res.json({
+      data: {
+        hash_b64url,
+        timestamp_iso,
+        likely_time_difference_ms,
+        public_key_base64url
+      },
+      concatenated,
+      signature_base64url
+    });
+  } catch (error) {
+    // Use existing error handler for NEAR unavailability and others
+    if (/NEAR time unavailable/i.test(error.message)) {
+      return res.status(503).json({ error: error.message });
+    }
+    handleError(res, error);
+  }
+});
 
 /**
  * PUT /near-health - NEAR RPC health check endpoint

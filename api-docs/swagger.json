@@ -140,6 +140,38 @@
       }
     }
   ,
+    "/sign/hash": {
+      "put": {
+        "summary": "Sign a base64url-encoded hash concatenated with the latest NEAR timestamp, likely_time_difference_ms, and public key.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["hash_b64url"],
+                "properties": {
+                  "hash_b64url": { "type": "string", "description": "Base64url-encoded hash. Decoded length must be 1..128 bytes." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signature and concatenated data",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SignHashResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "503": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
     "/near-health": {
       "put": {
         "summary": "NEAR RPC health check",
@@ -279,7 +311,16 @@
           "status": { "type": "string", "enum": ["healthy", "unhealthy"] },
           "endpoint": { "type": "string" },
           "error": { "type": "string" },
-          "timestamp": { "type": "string", "description": "ISO 8601 timestamp" }
+          "timestamp": { "type": "string", "description": "ISO 8601 timestamp" },
+          "cache_available": { "type": "boolean" },
+          "last_fetch_timestamp": { "type": "string", "nullable": true },
+          "last_fetch_age_ms": { "type": "integer", "nullable": true },
+          "last_block_timestamp": { "type": "string", "nullable": true },
+          "last_block_age_ms": { "type": "integer", "nullable": true },
+          "poll_interval_ms": { "type": "integer" },
+          "block_interval_ms": { "type": "integer" },
+          "network_margin_ms": { "type": "integer" },
+          "likely_time_difference_ms": { "type": "integer", "nullable": true }
         }
       },
       "ErrorJsonResponse": {
@@ -293,7 +334,24 @@
             "description": "details about the error encountered"
           }
         }
+      },
+      "SignHashResponse": {
+        "type": "object",
+        "required": ["data", "concatenated", "signature_base64url"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["hash_b64url", "timestamp_iso", "likely_time_difference_ms", "public_key_base64url"],
+            "properties": {
+              "hash_b64url": { "type": "string" },
+              "timestamp_iso": { "type": "string" },
+              "likely_time_difference_ms": { "type": "integer" },
+              "public_key_base64url": { "type": "string" }
+            }
+          },
+          "concatenated": { "type": "string", "description": "String of 'hash_b64url.timestamp_iso.likely_time_difference_ms.public_key_base64url'" },
+          "signature_base64url": { "type": "string" }
+        }
       }
     }
   }
-}
