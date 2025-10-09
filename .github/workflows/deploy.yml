@@ -13,7 +13,7 @@ on:
         default: ''
 
 env:
-  SSH_HOST: 174.138.10.2
+  SSH_HOST: 178.62.195.21
   SSH_USER: ${{ secrets.SSH_USER }}
   WEBHOOK_DOMAIN: webhook.timeherenow.com
   WEBHOOKPORT: 3444
