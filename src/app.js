@@ -23,22 +23,57 @@ const SERVERPORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === "production";
 const SERVICE_NAME = "Time Here Now API";
 
+const RATE_LIMIT_SETTINGS = {
+  global: { max: 240, windowMinutes: 1 },
+  login: { max: 20, windowMinutes: 1 },
+  signclient: { max: 6, windowMinutes: 1 }
+};
+
 // Express app setup
 const app = express();
+app.disable("x-powered-by");
 const TimeZoneService = require('./lib/timezone-service');
 // Dedicated service instance for health reporting (NEAR status)
 const tzHealthService = new TimeZoneService();
 
 // Store server instance for graceful shutdown
 let server;
+let rateLimitersApplied = false;
+
+function applyRateLimitersIfAvailable() {
+  if (rateLimitersApplied) {
+    return;
+  }
+
+  const sdkFactory = app.locals?.roditClient?.getRateLimitMiddleware?.();
+  const { global, login, signclient } = RATE_LIMIT_SETTINGS;
+
+  if (typeof sdkFactory !== "function") {
+    logger.warn("Rate limiting middleware not available from SDK - skipping rate limiter setup");
+    return;
+  }
+
+  app.use('/api/login', sdkFactory(login.max, login.windowMinutes));
+  app.use('/api/signclient', sdkFactory(signclient.max, signclient.windowMinutes));
+  app.use('/api', sdkFactory(global.max, global.windowMinutes));
+
+  rateLimitersApplied = true;
+
+  logger.info("Rate limiting middleware applied", {
+    component: "TimeHereNowAPI",
+    global,
+    login,
+    signclient
+  });
+}
 
 // Configure Express to trust proxies for correct client IP detection
 // Using a specific configuration instead of 'true' to prevent IP spoofing
 app.set("trust proxy", 1);
 
-// Parse JSON and URL-encoded bodies
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Parse JSON and URL-encoded bodies with explicit limits
+app.use(express.json({ limit: "64kb" }));
+app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 
 // Basic logging middleware
 app.use((req, res, next) => {
@@ -154,9 +189,13 @@ async function startServer() {
       const authClient = await RoditClient.create('server');
       app.locals.roditClient = authClient;
       logger.info("Authentication client initialized");
+      applyRateLimitersIfAvailable();
     } catch (authErr) {
       logger.warn("Failed to initialize authentication client", { error: authErr.message });
     }
+
+    // Ensure rate limiters are applied even if SDK init failed
+    applyRateLimitersIfAvailable();
 
     // Setup routes
     setupRoutes();
@@ -183,7 +222,20 @@ async function startServer() {
       };
       
       logger.info("Time Here Now API server started", serverInfo);
-      
+
+      if (server) {
+        server.keepAliveTimeout = 5000;
+        server.headersTimeout = 35000;
+        server.requestTimeout = 30000;
+        server.maxRequestsPerSocket = 100;
+        logger.info("HTTP server timeouts configured", {
+          keepAliveTimeoutMs: server.keepAliveTimeout,
+          headersTimeoutMs: server.headersTimeout,
+          requestTimeoutMs: server.requestTimeout,
+          maxRequestsPerSocket: server.maxRequestsPerSocket
+        });
+      }
+
       // For development, show endpoints
       if (process.env.NODE_ENV !== 'production') {
         console.log(`\n🌍 Time Here Now API running on port ${SERVERPORT}`);

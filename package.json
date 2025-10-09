@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "express": "^4.19.2",
+    "express-rate-limit": "^8.0.0",
     "@vvo/tzdb": "^6.186.0",
     "cldr-data": "^36.0.4",
     "geoip-lite": "^1.4.8",
