@@ -2,6 +2,7 @@
 
 **Base URL**: `https://timeherenow.rodit.org`
 
+
 **Available Endpoints**:
 - `POST /api/login` - Authentication
 - `POST /api/logout` - Logout
