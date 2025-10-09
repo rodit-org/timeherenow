@@ -11,7 +11,7 @@
 - `PUT /api/timezone` - List all IANA timezones
 - `PUT /api/timezone/area` - List timezones for a given area
 - `PUT /api/timezone/time` - Get current time for a timezone (or by client IP)
-- `PUT /api/timezones/by-country` - List timezones by ISO country code
+- `PUT /api/timezones/by-country` - List timezones by ISO country code.
 - `PUT /api/ip` - Get current time with location obtained from theIP (IPv4 or IPv6)
 
 

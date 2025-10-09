@@ -2,9 +2,9 @@ name: Deploy Node.js API
 
 on:
   push:
-    branches: [ 20250910mcp ]
+    branches: [ main ]
   pull_request:
-    branches: [ 20250910mcp ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       commit_sha:
