@@ -742,170 +742,83 @@ logger.errorWithContext('Operation failed', {
 }, error);
 ```
 
-### Loki Integration
+### Loki with the SDK (canonical)
 
-Configure centralized logging with Grafana Loki:
+Use this as the authoritative guide for configuring logging with the SDK.
+
+#### Environment variables
 
 ```bash
-# Environment variables
-export LOKI_URL=https://loki.example.com:3100
-export LOKI_BASIC_AUTH=username:password
-export LOKI_TLS_SKIP_VERIFY=true  # Only for testing
+export LOKI_URL=https://<your-loki-host>:3100
+export LOKI_BASIC_AUTH="username:password"   # store in secrets
+export LOKI_TLS_SKIP_VERIFY=true              # only for self-signed/test
 export LOG_LEVEL=info
+export SERVICE_NAME=clienttestapi-api
 ```
 
+These are already mapped in `config/custom-environment-variables.json`, so container/CI env vars will flow into the app.
+
+#### How the SDK selects/configures the logger
+
+- Default: JSON to stdout only (no Loki). Honors `LOG_LEVEL`, adds `service_name`.
+- Production: Create a Winston logger with a `winston-loki` transport and inject it once: `logger.setLogger(customLogger)`.
+- Access: `const { logger } = require('@rodit/rodit-auth-be')` or `roditClient.getLogger()` both delegate to the same facade.
+
+#### Direct-to-Loki via winston-loki (recommended)
+
 ```javascript
-// Custom logger injection for advanced scenarios
+const { logger } = require('@rodit/rodit-auth-be');
 const winston = require('winston');
 const LokiTransport = require('winston-loki');
+
+const transports = [new winston.transports.Console({ format: winston.format.json() })];
+
+if (process.env.LOKI_URL) {
+  const lokiOptions = {
+    host: process.env.LOKI_URL,
+    basicAuth: process.env.LOKI_BASIC_AUTH, // Basic Auth for Loki
+    labels: { app: process.env.SERVICE_NAME || 'clienttestapi-api', component: 'rodit-sdk' },
+    json: true,
+    batching: true
+  };
+  if ((process.env.LOKI_TLS_SKIP_VERIFY || '').toLowerCase() === 'true') {
+    lokiOptions.ssl = { rejectUnauthorized: false };
+  }
+  transports.push(new LokiTransport(lokiOptions));
+}
 
 const customLogger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.json(),
-  transports: [
-    new winston.transports.Console(),
-    new LokiTransport({
-      host: process.env.LOKI_URL,
-      basicAuth: process.env.LOKI_BASIC_AUTH,
-      labels: { app: 'my-service', component: 'rodit-sdk' },
-      json: true,
-      batching: true
-    })
-  ]
+  transports
 });
 
 logger.setLogger(customLogger);
 ```
 
-## Performance Tracking
+#### Promtail (optional alternative)
 
-### Overview
+- Only needed if you must ship file logs (e.g., Nginx) or cannot push directly from the process.
+- SDK logs do not need Promtail when using `winston-loki`.
+- If you keep Promtail, ensure the scrape path matches files (see `promtail/promtail-config.yml`).
 
-The SDK includes a built-in performance service that tracks:
-- Request counts and durations
-- Error rates
-- Component-level metrics
-- Custom application metrics
+#### CI/CD notes
 
-### Performance Service Integration
+- `.github/workflows/deploy.yml` passes `LOKI_URL`, `LOKI_TLS_SKIP_VERIFY`, `LOKI_BASIC_AUTH` into the container; `src/app.js` config injects the transport at startup.
+- Promtail steps are commented out. If you don’t need file-based ingestion, you can remove Promtail steps and the `promtail/` directory entirely. Keep it only for Nginx/file logs.
+- Store `LOKI_BASIC_AUTH` in CI/CD secrets; never commit credentials.
 
-```javascript
-// Get performance service from client
-const performanceService = roditClient.getPerformanceService();
+#### Quick verification
 
-// Performance monitoring middleware
-app.use((req, res, next) => {
-  req.startTime = Date.now();
-  
-  // Record request start
-  if (performanceService) {
-    performanceService.recordRequest(req);
-  }
-  
-  res.on('finish', () => {
-    const duration = Date.now() - req.startTime;
-    
-    // Record metrics
-    if (performanceService) {
-      performanceService.recordMetric('request_duration_ms', duration, {
-        method: req.method,
-        path: req.path,
-        status: res.statusCode
-      });
-      
-      // Record errors
-      if (res.statusCode >= 400) {
-        performanceService.recordMetric('error_count', 1, {
-          method: req.method,
-          path: req.path,
-          status: res.statusCode
-        });
-      }
-    }
-    
-    // Also log to logger
-    logger.metric('request_duration_ms', duration, {
-      method: req.method,
-      path: req.path,
-      status: res.statusCode
-    });
-  });
-  
-  next();
-});
-```
+ 1) Start the app with `LOKI_URL` and `LOKI_BASIC_AUTH` set.
+ 2) Emit a test log: `logger.info('Loki test', { component: 'SmokeTest' })`.
+ 3) In Grafana Explore, query with `{app="clienttestapi-api"}` and confirm logs.
 
-### Metrics Endpoints
-
-Expose metrics for monitoring:
-
-```javascript
-// routes/metricsroutes.js
-const router = express.Router();
-
-router.get('/summary', authenticate, async (req, res) => {
-  const performanceService = req.app.locals.roditClient.getPerformanceService();
-  const sessionManager = req.app.locals.roditClient.getSessionManager();
-  
-  const metrics = {
-    requests: {
-      total: performanceService.getRequestCount(),
-      errors: performanceService.getErrorCount()
-    },
-    sessions: {
-      active: await sessionManager.getActiveSessionCount(),
-      total: await sessionManager.getTotalSessionCount()
-    },
-    performance: {
-      avgResponseTime: performanceService.getAverageResponseTime(),
-      p95ResponseTime: performanceService.getPercentile(95)
-    },
-    timestamp: new Date().toISOString(),
-    requestId: req.requestId
-  };
-  
-  res.json(metrics);
-});
-
-module.exports = router;
-```
-
-### Custom Metrics
-
-```javascript
-// Record custom application metrics
-const performanceService = roditClient.getPerformanceService();
-
-// Record operation duration
-const startTime = Date.now();
-try {
-  await performDatabaseOperation();
-  const duration = Date.now() - startTime;
-  
-  performanceService.recordMetric('database_operation_ms', duration, {
-    operation: 'insert',
-    table: 'comments',
-    result: 'success'
-  });
-} catch (error) {
-  const duration = Date.now() - startTime;
-  
-  performanceService.recordMetric('database_operation_ms', duration, {
-    operation: 'insert',
-    table: 'comments',
-    result: 'error'
-  });
-}
-```
-
-## Webhooks
-
-### Overview
+ ## Webhooks
+ 
+ ### Overview
 
 The SDK supports sending webhooks for important events. Webhook URLs are configured in the RODiT token metadata.
-
-### Webhook Configuration
-
 Webhooks are configured in your RODiT token:
 
 ```json

@@ -16,10 +16,14 @@ logger.debugWithContext(
   })
 );
 
-const credentialStoreModule =
-  RODIT_NEAR_CREDENTIALS_SOURCE === "file"
-    ? require("../middleware/filecredentialstore")
-    : require("../middleware/vaultcredentialstore");
+let credentialStoreModule;
+if (RODIT_NEAR_CREDENTIALS_SOURCE === "file") {
+  credentialStoreModule = require("../middleware/filecredentialstore");
+} else if (RODIT_NEAR_CREDENTIALS_SOURCE === "env") {
+  credentialStoreModule = require("../middleware/environcredentialstore");
+} else {
+  credentialStoreModule = require("../middleware/vaultcredentialstore");
+}
 
 // const credentialStoreModule = require("../middleware/filecredentialstore");
 
@@ -646,7 +650,7 @@ class RoditManager {
       await this.initializeRoditConfig(role);
 
       logger.info(
-        `Vault initialized and RODiT configuration loaded for role: ${role}`
+        `Credentials (${RODIT_NEAR_CREDENTIALS_SOURCE}) initialized and RODiT configuration loaded for role: ${role}`
       );
 
       // Get and validate the configuration

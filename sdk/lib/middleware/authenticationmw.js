@@ -103,6 +103,15 @@ async function login_client(req, res) {
       logger.infoWithContext("Using legacy 'signature' parameter instead of 'roditid_base64url_signature'", baseContext);
     }
 
+    logger.debugWithContext("Raw login parameters received", {
+      ...baseContext,
+      requestBody: {
+        roditid: peer_roditid,
+        timestamp: peer_timestamp,
+        signature: roditid_base64url_signature
+      }
+    });
+
     // Validate required parameters
     // Get the silence flag from config (default to false if not set)
     silenceLoginFailures = config.get('SECURITY_OPTIONS.SILENT_LOGIN_FAILURES');
@@ -1695,6 +1704,9 @@ async function login_portal(config_own_rodit, port) {
         component: "AuthenticationService",
         method: "login_server",
         requestId,
+        roditid,
+        timestamp,
+        roditid_base64url_signature,
         apiEndpoint: apiendpoint + "/api/login",
       });
 
