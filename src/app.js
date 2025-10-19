@@ -304,10 +304,15 @@ async function startServer() {
         env: process.env.NODE_ENV || "development",
         service: SERVICE_NAME,
         endpoints: [
-          { method: 'PUT', path: '/api/timezone', description: 'List all timezones (JSON)' },
+          { method: 'POST', path: '/api/login', description: 'Authentication' },
+          { method: 'POST', path: '/api/logout', description: 'Logout' },
+          { method: 'POST', path: '/api/signclient', description: 'Sign client RODiT token' },
+          { method: 'PUT', path: '/api/timezone', description: 'List all timezones' },
           { method: 'PUT', path: '/api/timezone/area', description: 'List timezones for area' },
           { method: 'PUT', path: '/api/timezone/time', description: 'Get time for timezone' },
+          { method: 'PUT', path: '/api/timezones/by-country', description: 'List timezones by country code' },
           { method: 'PUT', path: '/api/ip', description: 'Get time based on IP' },
+          { method: 'PUT', path: '/api/sign/hash', description: 'Sign hash with NEAR timestamp' },
           { method: 'GET', path: '/health', description: 'Health check' },
           { method: 'GET', path: '/api-docs', description: 'API documentation' }
         ]

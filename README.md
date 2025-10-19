@@ -6,13 +6,15 @@
 **Available Endpoints**:
 - `POST /api/login` - Authentication
 - `POST /api/logout` - Logout
+- `POST /api/signclient` - Sign client RODiT token
 - `GET /health` - Health check
 - `GET /api-docs` - API documentation
 - `PUT /api/timezone` - List all IANA timezones
 - `PUT /api/timezone/area` - List timezones for a given area
 - `PUT /api/timezone/time` - Get current time for a timezone (or by client IP)
-- `PUT /api/timezones/by-country` - List timezones by ISO country code.
-- `PUT /api/ip` - Get current time with location obtained from theIP (IPv4 or IPv6)
+- `PUT /api/timezones/by-country` - List timezones by ISO country code
+- `PUT /api/ip` - Get current time with location obtained from the IP (IPv4 or IPv6)
+- `PUT /api/sign/hash` - Sign a hash with NEAR timestamp
 
 
 **Authentication**: Most endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.
@@ -99,11 +101,25 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
   - Response: DateTimeJsonResponse (same as above), using timezone resolved from the IP.
   - Errors: returns HTTP 503 if NEAR blockchain time is unavailable.
 
-- **PUT `/api/near-health`**
+- **PUT `/api/sign/hash`**
+  - Request:
+    ```json
+    { "hash_b64url": "base64url-encoded-hash" }
+    ```
   - Response:
     ```json
-    { "status": "healthy", "endpoint": "https://rpc.mainnet.near.org", "timestamp": "2025-10-08T10:57:01.000Z" }
+    {
+      "data": {
+        "hash_b64url": "base64url-encoded-hash",
+        "timestamp_iso": "2025-10-08T10:57:01.000Z",
+        "likely_time_difference_ms": 850,
+        "public_key_base64url": "base64url-encoded-public-key"
+      },
+      "concatenated": "hash_b64url.timestamp_iso.likely_time_difference_ms.public_key_base64url",
+      "signature_base64url": "base64url-encoded-signature"
+    }
     ```
+  - Errors: returns HTTP 503 if NEAR blockchain time is unavailable.
 
 ##### Time zone data sourcing
 - Time zones are sourced from the IANA Time Zone Database (tzdb). See `api-docs/swagger.json` `externalDocs` referencing IANA.
@@ -144,14 +160,74 @@ RODiT mutual authentication endpoint for obtaining session tokens.
 }
 ```
 
-##### POST /logout
+##### POST /api/logout
 Session termination endpoint.
 
 **Headers**: `Authorization: Bearer <JWT_TOKEN>`
 
+**Response (200)**:
+```json
+{
+  "success": true,
+  "message": "Logout successful"
+}
+```
+
 #### Signing Endpoints
 
-Not available in this API build.
+##### POST /api/signclient
+RODiT token minting endpoint for creating new client tokens.
+
+**Request Body**:
+```json
+{
+  "tobesignedValues": {
+    "not_after": "string (ISO 8601 timestamp)",
+    "max_requests": "number",
+    "maxrq_window": "number",
+    "permissioned_routes": "string (JSON)",
+    "serviceprovider_signature": "string"
+  },
+  "mintingfee": "string",
+  "mintingfeeaccount": "string"
+}
+```
+
+**Response (201)**:
+```json
+{
+  "token_id": "string",
+  "fee_signature_base64url": "string"
+}
+```
+
+##### PUT /api/sign/hash
+Sign a base64url-encoded hash concatenated with the latest NEAR timestamp, likely_time_difference_ms, and public key.
+
+**Request Body**:
+```json
+{
+  "hash_b64url": "string (base64url-encoded hash, 1-128 bytes when decoded)"
+}
+```
+
+**Response (200)**:
+```json
+{
+  "data": {
+    "hash_b64url": "string",
+    "timestamp_iso": "string (ISO 8601)",
+    "likely_time_difference_ms": "number",
+    "public_key_base64url": "string"
+  },
+  "concatenated": "string",
+  "signature_base64url": "string"
+}
+```
+
+**Errors**:
+- 400: Invalid hash format or length
+- 503: NEAR time unavailable or signing service unavailable
 
 #### System Endpoints
 
