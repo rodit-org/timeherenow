@@ -325,28 +325,6 @@ The nginx reverse proxy provides:
 - Error handling with CORS-compliant responses
 - Timeouts: 60s for connect/send/read operations
 
-### Logging Configuration (promtail/promtail-config.yml)
-
-Promtail collects and forwards logs to Grafana Loki:
-
-**Configuration**:
-- **Target**: `https://grafana.cableguard.net:3100/loki/api/v1/push`
-- **TLS**: Insecure skip verify enabled for internal networks
-- **Retry Logic**: Exponential backoff (500ms to 5m, max 10 retries)
-
-**Log Collection**:
-- **Path**: `/app/logs/*.log`
-- **Labels**: 
-  - `job: timeherenow-api`
-  - `hostname: timeherenow.rodit.org`
-  - `app: timeherenow-api`
-
-**Log Processing**:
-- Filename extraction for log categorization
-- Component detection (api/nginx/system)
-- Log type classification (error/access/info)
-- Filtering to reduce noise (drops webhook startup messages)
-
 ### GitHub Actions Deployment (.github/workflows/deploy.yml)
 
 **Trigger Events**:
@@ -371,7 +349,6 @@ Promtail collects and forwards logs to Grafana Loki:
    - **Pod Creation**: Create `timeherenow-pod` with port 8443 exposed
    - **API Container**: Build and run from `api.Dockerfile`
    - **Nginx Container**: Build and run from `nginx/nginx.Dockerfile`
-   - **Promtail Container**: Run from official Grafana image
 
 4. **Environment Variables**:
    - Loki logging configuration
@@ -385,7 +362,7 @@ Promtail collects and forwards logs to Grafana Loki:
 - **Container Runtime**: Podman
 
 **Volume Mounts**:
-- `/app/logs`: Application logs (shared with Promtail)
+- `/app/logs`: Application logs
 - `/app/data`: Persistent application data
 - `/app/certs`: SSL certificates (read-only)
 
@@ -395,4 +372,3 @@ Promtail collects and forwards logs to Grafana Loki:
 2. **Network Security**: HTTPS-only with strong TLS configuration
 3. **CORS Security**: Strict origin whitelist
 4. **Secrets Management**: HashiCorp Vault integration
-5. **Log Security**: Secure log forwarding to centralized system

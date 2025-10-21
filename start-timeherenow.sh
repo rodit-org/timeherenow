@@ -93,7 +93,6 @@ restart_timeherenow() {
     local containers=(
         "timeherenow-nginx"
         "timeherenow-container"
-        "timeherenow-promtail"
         "$infra_container"
     )
     # Verify all containers exist
@@ -115,7 +114,6 @@ restart_timeherenow() {
         "$infra_container"
         "timeherenow-container"
         "timeherenow-nginx"
-        "timeherenow-promtail"
     )
     for container in "${start_containers[@]}"; do
         if ! start_container "$container"; then
@@ -148,7 +146,6 @@ all_containers=(
     "$infra_container"
     "timeherenow-container"
     "timeherenow-nginx"
-    "timeherenow-promtail"
 )
 for container in "${all_containers[@]}"; do
     if check_container_status "$container"; then

@@ -53,7 +53,7 @@ jobs:
       - name: Setup and Copy Files
         run: |
           echo "Setting up directories..."
-          ssh ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "mkdir -p ~/timeherenow-app/{certs,logs,data,nginx,promtail} && mkdir -p ~/timeherenow-app/logs/nginx && chmod 0775 ~/timeherenow-app/logs/nginx || true && podman unshare chown -R 101:101 ~/timeherenow-app/logs/nginx || true"
+          ssh ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "mkdir -p ~/timeherenow-app/{certs,logs,data,nginx} && mkdir -p ~/timeherenow-app/logs/nginx && chmod 0775 ~/timeherenow-app/logs/nginx || true && podman unshare chown -R 101:101 ~/timeherenow-app/logs/nginx || true"
           
           echo "Copying API files..."
           rsync -avz --delete \
@@ -76,7 +76,6 @@ jobs:
             podman pod exists timeherenow-pod && podman pod rm -f timeherenow-pod
             podman image exists timeherenow-image:latest && podman rmi -f timeherenow-image:latest
             podman image exists localhost/timeherenow-nginx:latest && podman rmi -f localhost/timeherenow-nginx:latest
-            podman image exists localhost/timeherenow-promtail:latest && podman rmi -f localhost/timeherenow-promtail:latest
             
             # Create new pod
             echo 'Creating API pod...'
@@ -186,18 +185,6 @@ jobs:
               -v ~/timeherenow-app/logs/nginx:/var/log/nginx:Z,U \
               localhost/timeherenow-nginx:latest
 
-            # Promtail container temporarily disabled
-            # echo 'Skipping Promtail container build and run...'
-            # podman build -f promtail.Dockerfile -t localhost/timeherenow-promtail:latest .
-            # podman run -d --name=promtail-container \
-            #   --pod=timeherenow-pod \
-            #   -v $(pwd)/promtail:/etc/promtail \
-            #   -v $(pwd)/logs:/app/logs \
-            #   localhost/timeherenow-promtail:latest \
-            #   -config.file=/etc/promtail/promtail-config.yml:/etc/promtail/config.yml:ro,Z \
-              docker.io/grafana/promtail:latest \
-              -config.file=/etc/promtail/config.yml
-            
             # Check status and logs
             echo 'Container status:'
             podman ps -a
@@ -205,6 +192,4 @@ jobs:
             podman logs timeherenow-container || true
             echo 'Nginx logs:'
             podman logs timeherenow-nginx || true
-            echo 'Promtail logs:'
-            podman logs timeherenow-promtail || true
           "
