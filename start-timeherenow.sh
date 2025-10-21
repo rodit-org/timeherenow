@@ -85,15 +85,29 @@ restart_timeherenow() {
     echo -e "\n${BLUE}=== Restarting timeherenow containers on port 8443 ===${NC}"
     # Find the infra container (exposes port 8443)
     local infra_container=$(podman ps -a --filter "label=io.podman.pod.name=timeherenow-pod" --format "{{.Names}}" | grep -E ".*-infra$" | head -n1)
-    if [ -z "$infra_container" ]; then
-        echo -e "${RED}Error: Could not find infrastructure container for port 8443${NC}"
-        return 1
+    if podman pod exists timeherenow-pod; then
+        echo -e "${YELLOW}Pod timeherenow-pod detected. Restarting pod...${NC}"
+        podman pod stop timeherenow-pod >/dev/null 2>&1
+        podman pod start timeherenow-pod >/dev/null 2>&1
+        local start_containers=(
+            "timeherenow-container"
+            "timeherenow-nginx"
+        )
+        for container in "${start_containers[@]}"; do
+            if ! start_container "$container"; then
+                echo -e "${RED}Error: Failed to start $container. Stopping script.${NC}"
+                get_container_logs "$container"
+                return 1
+            fi
+            sleep 3
+        done
+        echo -e "${GREEN}All timeherenow containers restarted successfully!${NC}"
+        return 0
     fi
     # Define containers in order for stopping (reverse order)
     local containers=(
         "timeherenow-nginx"
         "timeherenow-container"
-        "$infra_container"
     )
     # Verify all containers exist
     for container in "${containers[@]}"; do
@@ -111,7 +125,6 @@ restart_timeherenow() {
     done
     # Start containers in correct order
     local start_containers=(
-        "$infra_container"
         "timeherenow-container"
         "timeherenow-nginx"
     )
@@ -143,10 +156,12 @@ all_running=true
 # Find infra container again
 infra_container=$(podman ps -a --filter "label=io.podman.pod.name=timeherenow-pod" --format "{{.Names}}" | grep -E ".*-infra$" | head -n1)
 all_containers=(
-    "$infra_container"
     "timeherenow-container"
     "timeherenow-nginx"
 )
+if [ -n "$infra_container" ]; then
+    all_containers=("$infra_container" "${all_containers[@]}")
+fi
 for container in "${all_containers[@]}"; do
     if check_container_status "$container"; then
         echo -e "${GREEN}✓ $container is running${NC}"
