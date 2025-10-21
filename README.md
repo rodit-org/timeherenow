@@ -15,7 +15,7 @@
 - `PUT /api/timezones/by-country` - List timezones by ISO country code
 - `PUT /api/ip` - Get current time with location obtained from the IP (IPv4 or IPv6)
 - `PUT /api/sign/hash` - Sign a hash with NEAR timestamp.
-- `PUT /api/sign/client` - Sign a hash with NEAR timestamp.
+
 
 **Authentication**: Most endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.
 
