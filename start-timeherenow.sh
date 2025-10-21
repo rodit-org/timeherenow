@@ -84,7 +84,7 @@ container_exists() {
 restart_timeherenow() {
     echo -e "\n${BLUE}=== Restarting timeherenow containers on port 8443 ===${NC}"
     # Find the infra container (exposes port 8443)
-    local infra_container=$(podman ps -a --format '{{if eq .Ports "0.0.0.0:8443->8443/tcp"}}{{.Names}}{{end}}' | grep -E ".*-infra$")
+    local infra_container=$(podman ps -a --filter "label=io.podman.pod.name=timeherenow-pod" --format "{{.Names}}" | grep -E ".*-infra$" | head -n1)
     if [ -z "$infra_container" ]; then
         echo -e "${RED}Error: Could not find infrastructure container for port 8443${NC}"
         return 1
@@ -141,7 +141,7 @@ fi
 echo -e "\n${YELLOW}Checking final status of timeherenow containers...${NC}"
 all_running=true
 # Find infra container again
-infra_container=$(podman ps -a --format '{{if eq .Ports "0.0.0.0:8443->8443/tcp"}}{{.Names}}{{end}}' | grep -E ".*-infra$")
+infra_container=$(podman ps -a --filter "label=io.podman.pod.name=timeherenow-pod" --format "{{.Names}}" | grep -E ".*-infra$" | head -n1)
 all_containers=(
     "$infra_container"
     "timeherenow-container"
