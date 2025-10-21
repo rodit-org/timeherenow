@@ -5,7 +5,7 @@ const express = require('express');
 const net = require('net');
 const router = express.Router();
 const base64url = require('base64url');
-const sdk = require('../../sdk');
+const nacl = require('tweetnacl');
 const TimeZoneService = require('../lib/timezone-service');
 
 // Simple logger fallback
@@ -196,10 +196,15 @@ router.put('/sign/hash', async (req, res) => {
     }
     const seedBytes = configObject.own_rodit_bytes_private_key;
 
-    // Derive public key and sign using local SDK helpers
-    const public_key_base64url = sdk.publicKeyFromSeedBase64url(seedBytes);
+    // Derive public key from seed bytes
+    const keyPair = nacl.sign.keyPair.fromSecretKey(seedBytes);
+    const public_key_base64url = base64url(Buffer.from(keyPair.publicKey));
+    
+    // Create concatenated string and sign it
     const concatenated = `${hash_b64url}.${timestamp_iso}.${likely_time_difference_ms}.${public_key_base64url}`;
-    const signature_base64url = sdk.signBytesBase64urlWithSeed(seedBytes, Buffer.from(concatenated, 'utf8'));
+    const messageBytes = Buffer.from(concatenated, 'utf8');
+    const signature = nacl.sign.detached(messageBytes, seedBytes);
+    const signature_base64url = base64url(Buffer.from(signature));
 
     res.json({
       data: {
