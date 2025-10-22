@@ -3,9 +3,9 @@
 # Port mapping script - manages bidirectional iptables port forwarding
 # Usage: ./port-mapping.sh [enable|disable|status] [permanent|temporary] [source_port] [dest_port]
 
-# Default ports
-DEFAULT_SOURCE_PORT=8443
-DEFAULT_DEST_PORT=443
+# Default ports (SOURCE_PORT is the external port, DEST_PORT is where the service listens)
+DEFAULT_SOURCE_PORT=443
+DEFAULT_DEST_PORT=8443
 
 # Parse arguments
 ACTION=${1:-status}
@@ -19,8 +19,8 @@ show_usage() {
 Usage: $0 [enable|disable|status] [permanent|temporary] [source_port] [dest_port]
 
 Actions:
-  enable     Enable bidirectional port mapping
-  disable    Disable bidirectional port mapping
+  enable     Enable inbound port mapping (external -> local service)
+  disable    Disable inbound port mapping
   status     Show current port mapping status (default)
 
 Modes:
@@ -33,10 +33,10 @@ Ports:
 
 Examples:
   $0                                    # Show status
-  $0 enable                             # Enable temporary mapping (8443 <-> 443)
-  $0 enable permanent                   # Enable permanent mapping (8443 <-> 443)
+  $0 enable                             # Enable temporary mapping (443 -> 8443)
+  $0 enable permanent                   # Enable permanent mapping (443 -> 8443)
   $0 disable permanent                  # Disable and save permanently
-  $0 enable temporary 8080 80           # Enable temporary mapping (8080 <-> 80)
+  $0 enable temporary 80 8080           # Enable temporary mapping (80 -> 8080)
 EOF
 }
 
@@ -92,38 +92,41 @@ fi
 
 # Function to add iptables rules
 add_rules() {
-    echo "Adding bidirectional port mapping: $SOURCE_PORT <-> $DEST_PORT"
+    echo "Adding inbound port mapping: $SOURCE_PORT -> $DEST_PORT"
     
-    # Direction 1: SOURCE_PORT -> DEST_PORT
-    # PREROUTING: Redirect incoming traffic
+    # PREROUTING: Redirect incoming traffic from SOURCE_PORT to DEST_PORT
+    # This allows external clients to connect to SOURCE_PORT (e.g., 443) 
+    # and be redirected to DEST_PORT (e.g., 8443) where the service listens
     iptables -t nat -A PREROUTING -p tcp --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT
     
-    # OUTPUT: Redirect locally generated traffic
-    iptables -t nat -A OUTPUT -p tcp --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT
+    # OUTPUT: Redirect locally generated traffic from SOURCE_PORT to DEST_PORT
+    # This allows local processes to connect to SOURCE_PORT and reach the service on DEST_PORT
+    iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT
+    iptables -t nat -A OUTPUT -p tcp -d ::1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT
     
-    # Direction 2: DEST_PORT -> SOURCE_PORT
-    # PREROUTING: Redirect incoming traffic
-    iptables -t nat -A PREROUTING -p tcp --dport $DEST_PORT -j REDIRECT --to-port $SOURCE_PORT
+    # NOTE: We do NOT redirect outbound traffic to external hosts on port 443
+    # This would break HTTPS connections to external services (e.g., NEAR RPC, APIs)
     
-    # OUTPUT: Redirect locally generated traffic
-    iptables -t nat -A OUTPUT -p tcp --dport $DEST_PORT -j REDIRECT --to-port $SOURCE_PORT
-    
-    echo "Bidirectional port mapping enabled: $SOURCE_PORT <-> $DEST_PORT"
+    echo "Inbound port mapping enabled: $SOURCE_PORT -> $DEST_PORT"
 }
 
 # Function to remove iptables rules
 remove_rules() {
-    echo "Removing bidirectional port mapping: $SOURCE_PORT <-> $DEST_PORT"
+    echo "Removing port mapping: $SOURCE_PORT -> $DEST_PORT"
     
-    # Remove Direction 1: SOURCE_PORT -> DEST_PORT
+    # Remove PREROUTING rule
     iptables -t nat -D PREROUTING -p tcp --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
-    iptables -t nat -D OUTPUT -p tcp --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
     
-    # Remove Direction 2: DEST_PORT -> SOURCE_PORT
+    # Remove OUTPUT rules (both old bidirectional and new localhost-only)
+    iptables -t nat -D OUTPUT -p tcp --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
+    iptables -t nat -D OUTPUT -p tcp -d 127.0.0.1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
+    iptables -t nat -D OUTPUT -p tcp -d ::1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
+    
+    # Remove old bidirectional rules (DEST_PORT -> SOURCE_PORT) if they exist
     iptables -t nat -D PREROUTING -p tcp --dport $DEST_PORT -j REDIRECT --to-port $SOURCE_PORT 2>/dev/null || true
     iptables -t nat -D OUTPUT -p tcp --dport $DEST_PORT -j REDIRECT --to-port $SOURCE_PORT 2>/dev/null || true
     
-    echo "Bidirectional port mapping disabled: $SOURCE_PORT <-> $DEST_PORT"
+    echo "Port mapping disabled: $SOURCE_PORT -> $DEST_PORT"
 }
 
 # Function to save iptables rules permanently
