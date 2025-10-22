@@ -1,6 +1,6 @@
 #### Quick Reference for Frontend Integration
 
-**Base URL**: `https://timeherenow.rodit.org`
+**Base URL**: `https://api.timeherenow.com`
 
 
 **Available Endpoints**:
