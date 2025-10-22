@@ -98,7 +98,7 @@ const logoutRoutes = require("./protected/logout");
 })();
 
 // Configuration constants
-const SERVERPORT = config.get('SERVERPORT', process.env.PORT || 3000);
+const SERVERPORT = config.get('SERVERPORT', process.env.PORT || 8080);
 const isProduction = process.env.NODE_ENV === "production";
 const SERVICE_NAME = process.env.SERVICE_NAME || "Time Here Now API";
 
