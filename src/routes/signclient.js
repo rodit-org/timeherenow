@@ -6,6 +6,7 @@ const { ulid } = require("ulid");
 const { logger, roditManager } = require("@rodit/rodit-auth-be");
 // login_portal method is now available on the RoditClient instance stored in app.locals
 const { createLogContext, logErrorWithMetrics } = logger;
+const config = require('config');
 
 async function signPortalRodit(
   port,
@@ -235,8 +236,9 @@ router.post("/signclient", async (req, res) => {
       logger.errorWithContext("Failed to get RODiT configuration", baseContext);
       throw new Error("Failed to initialize RODiT configuration");
     }
-
-    const portalPort = 8443;
+    
+    // We assume that the signportal and the API have the same port
+    const portalPort = config.get('SERVERPORT');
     
     // JWT Token management
     // roditClient already defined above
