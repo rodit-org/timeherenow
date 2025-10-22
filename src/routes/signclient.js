@@ -237,8 +237,8 @@ router.post("/signclient", async (req, res) => {
       throw new Error("Failed to initialize RODiT configuration");
     }
     
-    // We assume that the signportal and the API have the same port
-    const portalPort = config.get('SERVERPORT');
+    // Signportal port is harcoded here
+    const portalPort = 8443;
     
     // JWT Token management
     // roditClient already defined above
