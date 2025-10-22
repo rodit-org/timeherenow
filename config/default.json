@@ -9,6 +9,6 @@
     "ip.txt": ["entityAndProperties", "entityOnly"],
     "logout": ["entityAndProperties"]
   },
-  "MINTING_FEEACCOUNT": "20251001-rodit-org.testnet",
+  "MINTING_FEEACCOUNT": "20251018-rodit-org.testnet",
   "MINTING_FEE": "0.1"
 }

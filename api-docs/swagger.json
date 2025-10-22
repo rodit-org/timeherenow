@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "Time Here Now API",
-    "version": "20251007",
+    "version": "20251018",
     "description": "API to get the current time based on timezone or client IP. Time zones and offsets are sourced from the IANA Time Zone Database (tzdb)."
   },
   "servers": [
