@@ -198,20 +198,35 @@ function setupRoutes() {
   app.get("/health", async (req, res) => {
     try {
       const near = await tzHealthService.healthCheck();
-      res.status(200).json({
+      const response = {
         status: "healthy",
         timestamp: new Date().toISOString(),
         service: SERVICE_NAME,
         near
+      };
+      
+      logger.debugWithContext("Health check successful", {
+        component: 'API',
+        nearStatus: near?.status,
+        cacheAvailable: near?.cache_available
       });
+      
+      res.status(200).json(response);
     } catch (e) {
       // On failure, still report basic health with NEAR status degraded
-      res.status(200).json({
+      const response = {
         status: "healthy",
         timestamp: new Date().toISOString(),
         service: SERVICE_NAME,
         near: { status: 'unhealthy', error: e.message, timestamp: new Date().toISOString() }
+      };
+      
+      logger.warnWithContext("Health check NEAR error", {
+        component: 'API',
+        error: e.message
       });
+      
+      res.status(200).json(response);
     }
   });
 
@@ -279,6 +294,22 @@ function setupRoutes() {
 // Server startup
 async function startServer() {
   try {
+    // Wait for NEAR cache to initialize before accepting requests
+    logger.info("Waiting for NEAR blockchain cache to initialize...", {
+      component: 'TimeHereNowAPI'
+    });
+    try {
+      await tzHealthService.waitForNearCache(10000);
+      logger.info("NEAR cache initialized successfully", {
+        component: 'TimeHereNowAPI'
+      });
+    } catch (cacheErr) {
+      logger.warn("NEAR cache initialization timeout - server will start but time endpoints may return 503", {
+        component: 'TimeHereNowAPI',
+        error: cacheErr.message
+      });
+    }
+
     // Initialize authentication client and expose to routes
     try {
       const authClient = await RoditClient.create('server');

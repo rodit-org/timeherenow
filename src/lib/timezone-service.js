@@ -131,6 +131,25 @@ class TimeZoneService {
     this._pollTimer = setInterval(poll, this._pollIntervalMs);
   }
 
+  /**
+   * Wait for NEAR cache to be initialized with first successful poll
+   * Call this before starting the server to ensure cache is ready
+   * @param {number} timeoutMs - Maximum time to wait (default 10000ms)
+   * @returns {Promise<void>}
+   */
+  async waitForNearCache(timeoutMs = 10000) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeoutMs) {
+      const cache = this.nearCache || {};
+      if (typeof cache.ms === 'number' && !Number.isNaN(cache.ms)) {
+        return; // Cache is ready
+      }
+      // Wait 100ms before checking again
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error(`NEAR cache initialization timeout after ${timeoutMs}ms`);
+  }
+
   // Read cached NEAR ms or throw if unavailable
   _getCachedNearMsOrThrow() {
     const { ms } = this.nearCache || {};
