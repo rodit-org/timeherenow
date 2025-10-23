@@ -36,9 +36,9 @@ class TimeZoneService {
    * Returns timestamp in milliseconds
    */
   async _getNearTimestamp() {
-    // SDK returns ISO string, convert to ms; no fallback to system time
-    const isoString = await blockchainService.nearorg_rpc_timestamp();
-    return new Date(isoString).getTime();
+    // SDK returns nanosecond timestamp, convert to milliseconds
+    const timestampNs = await blockchainService.nearorg_rpc_timestamp();
+    return Math.floor(timestampNs / 1_000_000);
   }
 
   /**
@@ -54,7 +54,9 @@ class TimeZoneService {
    */
   async healthCheck() {
     try {
-      const isoString = await blockchainService.nearorg_rpc_timestamp();
+      const timestampNs = await blockchainService.nearorg_rpc_timestamp();
+      const ms = Math.floor(timestampNs / 1_000_000);
+      const isoString = new Date(ms).toISOString();
       const rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
       const now = Date.now();
       const cache = this.nearCache || {};
@@ -119,8 +121,10 @@ class TimeZoneService {
     if (this._pollTimer) return;
     const poll = async () => {
       try {
-        const iso = await blockchainService.nearorg_rpc_timestamp();
-        const ms = new Date(iso).getTime();
+        const timestampNs = await blockchainService.nearorg_rpc_timestamp();
+        // Convert nanosecond timestamp to milliseconds
+        const ms = Math.floor(timestampNs / 1_000_000);
+        const iso = new Date(ms).toISOString();
         this.nearCache = { ms, iso, fetchedAt: Date.now() };
       } catch (err) {
         // Keep last good value; do not update cache on failure
