@@ -266,6 +266,8 @@ function setupRoutes() {
   // Logout route (already requires auth in its own router; also after global auth)
   const protectedLogoutRoutes = require("./protected/logout");
   app.use("/api", protectedLogoutRoutes);
+  const timersRoutes = require("./protected/timers");
+  app.use("/api", timersRoutes);
 
   // Error handling middleware for routes
   app.use((err, req, res, next) => {
@@ -358,6 +360,7 @@ async function startServer() {
           { method: 'PUT', path: '/api/timezones/by-country', description: 'List timezones by country code' },
           { method: 'PUT', path: '/api/ip', description: 'Get time based on IP' },
           { method: 'PUT', path: '/api/sign/hash', description: 'Sign hash with NEAR timestamp' },
+          { method: 'POST', path: '/api/timers/schedule', description: 'Schedule webhook timer' },
           { method: 'GET', path: '/health', description: 'Health check' },
           { method: 'GET', path: '/api-docs', description: 'API documentation' }
         ]

@@ -54,9 +54,9 @@ function handleError(res, error, format = 'json') {
 }
 
   /**
-   * PUT /timezone - List all timezones (JSON)
+   * POST /timezone - List all timezones (JSON)
    */
-  router.put('/timezone', async (req, res) => {
+  router.post('/timezone', async (req, res) => {
     try {
       const timezones = await timezoneService.getAllTimezones();
       res.json(timezones);
@@ -68,10 +68,10 @@ function handleError(res, error, format = 'json') {
   
 
   /**
-   * PUT /timezone/area - List timezones for specific area (JSON)
+   * POST /timezone/area - List timezones for specific area (JSON)
    * Body: { area: string }
    */
-  router.put('/timezone/area', async (req, res) => {
+  router.post('/timezone/area', async (req, res) => {
   try {
     const { area } = req.body || {};
     const timezones = await timezoneService.getTimezonesByArea(area);
@@ -89,11 +89,11 @@ function handleError(res, error, format = 'json') {
   
 
 /**
- * PUT /timezone/time - Get current time for timezone (JSON)
+ * POST /timezone/time - Get current time for timezone (JSON)
  * Preferred Body: { timezone: string, locale?: string }
  * Legacy Body (supported as fallback): { area: string, location: string, region?: string, locale?: string }
  */
-router.put('/timezone/time', async (req, res) => {
+router.post('/timezone/time', async (req, res) => {
   try {
     const { timezone: tzFromBody, area, location, region } = req.body || {};
     const clientIP = getClientIP(req);
@@ -116,10 +116,10 @@ router.put('/timezone/time', async (req, res) => {
 });
 
   /**
-   * PUT /timezones/by-country - List timezones by ISO 3166-1 alpha-2 country code
+   * POST /timezones/by-country - List timezones by ISO 3166-1 alpha-2 country code
    * Body: { country_code: string }
    */
-  router.put('/timezones/by-country', async (req, res) => {
+  router.post('/timezones/by-country', async (req, res) => {
     try {
       const { country_code } = req.body || {};
       const list = await timezoneService.getTimezonesByCountryCode(country_code);
@@ -136,10 +136,10 @@ router.put('/timezone/time', async (req, res) => {
 
 
 /**
- * PUT /ip - Get current time based on the user IP or specified IP (IPv4 or IPv6) (JSON)
+ * POST /ip - Get current time based on the user IP or specified IP (IPv4 or IPv6) (JSON)
  * Body: { ip?: string }
  */
-  router.put('/ip', async (req, res) => {
+  router.post('/ip', async (req, res) => {
   try {
     const { ip } = req.body || {};
     if (ip && net.isIP(String(ip).trim()) === 0) {
@@ -161,10 +161,10 @@ router.put('/timezone/time', async (req, res) => {
 // IP-by-parameter routes consolidated into /ip and /ip.txt via JSON body
 
 /**
- * PUT /sign/hash - Sign provided base64url-encoded hash concatenated with NEAR time, likely diff and public key
+ * POST /sign/hash - Sign provided base64url-encoded hash concatenated with NEAR time, likely diff and public key
  * Body: { hash_b64url: string }
  */
-router.put('/sign/hash', async (req, res) => {
+router.post('/sign/hash', async (req, res) => {
   try {
     const { hash_b64url } = req.body || {};
     if (!hash_b64url || typeof hash_b64url !== 'string') {

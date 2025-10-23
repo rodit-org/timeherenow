@@ -7,15 +7,16 @@
 - `POST /api/login` - Authentication
 - `POST /api/logout` - Logout
 - `POST /api/signclient` - Sign client RODiT token
+- `POST /api/timers/schedule` - Schedule delayed webhook (SDK destination)
 - `GET /health` - Health check
 - `GET /api-docs` - Interactive API documentation (Swagger UI)
 - `GET /swagger.json` - Raw OpenAPI specification (JSON)
-- `PUT /api/timezone` - List all IANA timezones
-- `PUT /api/timezone/area` - List timezones for a given area
-- `PUT /api/timezone/time` - Get current time for a timezone (or by client IP)
-- `PUT /api/timezones/by-country` - List timezones by ISO country code
-- `PUT /api/ip` - Get current time with location obtained from the IP (IPv4 or IPv6)
-- `PUT /api/sign/hash` - Sign a hash with NEAR timestamp.
+- `POST /api/timezone` - List all IANA timezones
+- `POST /api/timezone/area` - List timezones for a given area
+- `POST /api/timezone/time` - Get current time for a timezone (or by client IP)
+- `POST /api/timezones/by-country` - List timezones by ISO country code
+- `POST /api/ip` - Get current time with location obtained from the IP (IPv4 or IPv6)
+- `POST /api/sign/hash` - Sign a hash with NEAR timestamp.
 
 
 **Authentication**: Most endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.
@@ -45,24 +46,24 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
 **IANA Time Zone Database (tzdb)**:
 #### Time Endpoints
 
-- **PUT `/api/timezone`**
+- **POST `/api/timezone`**
   - Response: `string[]` of IANA tzdb IDs, e.g., `"Europe/Berlin"`, `"America/Indiana/Knox"`.
 
-- **PUT `/api/timezone/area`**
+- **POST `/api/timezone/area`**
   - Request:
     ```json
     { "area": "America" }
     ```
   - Response: `string[]` of timezones beginning with `"America/"`.
 
-- **PUT `/api/timezones/by-country`**
+- **POST `/api/timezones/by-country`**
   - Request:
     ```json
     { "country_code": "US" }
     ```
   - Response: `string[]` of timezones for the ISO 3166-1 alpha-2 code.
 
-- **PUT `/api/timezone/time`** (preferred) and legacy segmented params
+- **POST `/api/timezone/time`** (preferred) and legacy segmented params
   - Request (preferred):
     ```json
     { "timezone": "Europe/Berlin", "locale": "de-DE" }
@@ -94,7 +95,7 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
     - `likely_time_difference_ms` is a conservative (>99% likely) upper bound on the difference between real time and the returned time, given 5 Hz polling and ~0.6 s block time.
   - Errors: returns HTTP 503 if NEAR blockchain time is unavailable.
 
-- **PUT `/api/ip`**
+- **POST `/api/ip`**
   - Request (optional IP; falls back to client IP):
     ```json
     { "ip": "2001:db8::1", "locale": "en-GB" }
@@ -102,7 +103,7 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
   - Response: DateTimeJsonResponse (same as above), using timezone resolved from the IP.
   - Errors: returns HTTP 503 if NEAR blockchain time is unavailable.
 
-- **PUT `/api/sign/hash`**
+- **POST `/api/sign/hash`**
   - Request:
     ```json
     { "hash_b64url": "base64url-encoded-hash" }
@@ -202,7 +203,7 @@ RODiT token minting endpoint for creating new client tokens.
 }
 ```
 
-##### PUT /api/sign/hash
+##### POST /api/sign/hash
 Sign a base64url-encoded hash concatenated with the latest NEAR timestamp, likely_time_difference_ms, and public key.
 
 **Request Body**:
@@ -229,6 +230,36 @@ Sign a base64url-encoded hash concatenated with the latest NEAR timestamp, likel
 **Errors**:
 - 400: Invalid hash format or length
 - 503: NEAR time unavailable or signing service unavailable
+
+#### Timer Endpoint
+
+##### POST /api/timers/schedule
+Schedules a delayed webhook to the SDK-configured destination. Returns a ULID immediately; the same `timer_id` is included in the webhook payload when it fires.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Request Body**:
+```json
+{ "delay_seconds": 10, "payload": { "any": "json" } }
+```
+
+**Response (202)**:
+```json
+{ "timer_id": "01JD8X...", "delay_seconds": 10, "scheduled_at": "ISO", "execute_at": "ISO", "requestId": "01JD8X..." }
+```
+
+**Webhook Payload (sent by SDK)**:
+```json
+{
+  "timer_id": "01JD8X...",
+  "scheduled_at": "ISO",
+  "execute_at": "ISO",
+  "fired_at": "ISO",
+  "user_id": "string",
+  "session_key": "string",
+  "payload": { "any": "json" }
+}
+```
 
 #### System Endpoints
 
