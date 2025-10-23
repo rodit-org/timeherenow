@@ -4,7 +4,6 @@ const { ulid } = require("ulid");
 
 // Import logger utilities from SDK
 const { logger } = require('@rodit/rodit-auth-be');
-const { createLogContext, logErrorWithMetrics } = logger;
 
 /**
  * @swagger

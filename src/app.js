@@ -12,6 +12,7 @@ const { ulid } = require("ulid");
 const { RoditClient, logger } = require("@rodit/rodit-auth-be");
 const loginRoutes = require("./routes/login");
 const logoutRoutes = require("./protected/logout");
+const { createUserRateLimitMiddleware } = require("./middleware/user-rate-limit");
 
 // Configure winston-loki logger following SDK README guidelines
 (() => {
@@ -132,15 +133,14 @@ function applyRateLimitersIfAvailable() {
     return;
   }
 
+  // Apply IP-based rate limiting for unauthenticated endpoints
   app.use('/api/login', sdkFactory(login.max, login.windowMinutes));
   app.use('/api/signclient', sdkFactory(signclient.max, signclient.windowMinutes));
-  app.use('/api', sdkFactory(global.max, global.windowMinutes));
 
   rateLimitersApplied = true;
 
-  logger.info("Rate limiting middleware applied", {
+  logger.info("IP-based rate limiting applied for unauthenticated endpoints", {
     component: "TimeHereNowAPI",
-    global,
     login,
     signclient
   });
@@ -228,6 +228,20 @@ function setupRoutes() {
   } else {
     logger.warn("Authentication middleware not available - /api routes are not protected", {
       component: 'TimeHereNowAPI'
+    });
+  }
+
+  // Apply user-based rate limiting for authenticated routes
+  if (app.locals.roditClient) {
+    const userRateLimiter = createUserRateLimitMiddleware(
+      app.locals.roditClient,
+      { max: RATE_LIMIT_SETTINGS.global.max, windowMinutes: RATE_LIMIT_SETTINGS.global.windowMinutes }
+    );
+    app.use("/api", userRateLimiter);
+    
+    logger.info("User-based rate limiting applied for authenticated endpoints", {
+      component: "TimeHereNowAPI",
+      fallbackLimits: RATE_LIMIT_SETTINGS.global
     });
   }
 
