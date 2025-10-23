@@ -170,11 +170,18 @@ router.put('/sign/hash', async (req, res) => {
     if (!hash_b64url || typeof hash_b64url !== 'string') {
       return res.status(400).json({ error: 'hash_b64url is required' });
     }
+    
+    // Validate base64url format: only A-Z, a-z, 0-9, -, _ characters allowed
+    // Base64url does not use padding (=), and uses - and _ instead of + and /
+    if (!/^[A-Za-z0-9_-]+$/.test(hash_b64url)) {
+      return res.status(400).json({ error: 'hash_b64url must be valid base64url format (only A-Z, a-z, 0-9, -, _ allowed)' });
+    }
+    
     let hashBytes;
     try {
       hashBytes = base64url.toBuffer(hash_b64url);
     } catch (e) {
-      return res.status(400).json({ error: 'hash_b64url must be valid base64url' });
+      return res.status(400).json({ error: 'hash_b64url must be valid base64url encoding' });
     }
     // Reasonable upper limit for hash input
     if (hashBytes.length === 0 || hashBytes.length > 128) {
