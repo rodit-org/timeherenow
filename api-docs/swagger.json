@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "Time Here Now API",
-    "version": "20251018",
+    "version": "20251023",
     "description": "API to get the current time based on timezone or client IP. Time zones and offsets are sourced from the IANA Time Zone Database (tzdb)."
   },
   "servers": [
@@ -110,6 +110,7 @@
     "/timezone": {
       "post": {
         "summary": "a listing of all timezones.",
+        "security": [{ "bearerAuth": [] }],
         "responses": {
           "default": {
             "$ref": "#/components/responses/SuccessfulListJsonResponse"
@@ -121,6 +122,7 @@
     "/timezone/area": {
       "post": {
         "summary": "a listing of all timezones available for that area.",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -145,6 +147,7 @@
     "/timezone/time": {
       "post": {
         "summary": "request the current time for a timezone (falls back to user IP if timezone is omitted).",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -179,6 +182,7 @@
     "/timezones/by-country": {
       "post": {
         "summary": "list timezones by ISO 3166-1 alpha-2 country code",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -204,6 +208,7 @@
     "/ip": {
       "post": {
         "summary": "request the current time based on the ip of the request or provided IP (IPv4 or IPv6).",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": false,
           "content": {
@@ -235,6 +240,7 @@
     "/sign/hash": {
       "post": {
         "summary": "Sign a base64url-encoded hash concatenated with the latest NEAR timestamp, likely_time_difference_ms, and public key.",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {

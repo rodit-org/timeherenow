@@ -4,22 +4,26 @@
 
 
 **Available Endpoints**:
+
+*Public Endpoints (no authentication required):*
 - `POST /api/login` - Authentication
-- `POST /api/logout` - Logout
 - `POST /api/signclient` - Sign client RODiT token
-- `POST /api/timers/schedule` - Schedule delayed webhook (SDK destination)
 - `GET /health` - Health check
 - `GET /api-docs` - Interactive API documentation (Swagger UI)
 - `GET /swagger.json` - Raw OpenAPI specification (JSON)
+
+*Protected Endpoints (require authentication):*
+- `POST /api/logout` - Logout
+- `POST /api/timers/schedule` - Schedule delayed webhook (SDK destination)
 - `POST /api/timezone` - List all IANA timezones
 - `POST /api/timezone/area` - List timezones for a given area
 - `POST /api/timezone/time` - Get current time for a timezone (or by client IP)
 - `POST /api/timezones/by-country` - List timezones by ISO country code
 - `POST /api/ip` - Get current time with location obtained from the IP (IPv4 or IPv6)
-- `POST /api/sign/hash` - Sign a hash with NEAR timestamp.
+- `POST /api/sign/hash` - Sign a hash with NEAR timestamp
 
 
-**Authentication**: Most endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.
+**Authentication**: Protected endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.
 
 **DateTimeJsonResponse**:
 ```json
@@ -45,6 +49,8 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
 
 **IANA Time Zone Database (tzdb)**:
 #### Time Endpoints
+
+**Note**: All time endpoints require authentication (`Authorization: Bearer <JWT_TOKEN>` header).
 
 - **POST `/api/timezone`**
   - Response: `string[]` of IANA tzdb IDs, e.g., `"Europe/Berlin"`, `"America/Indiana/Knox"`.
@@ -299,7 +305,7 @@ Raw OpenAPI 3.0.1 specification in JSON format for programmatic access and tooli
 ```json
 {
   "openapi": "3.0.1",
-  "info": { "title": "Time Here Now API", "version": "20251018" },
+  "info": { "title": "Time Here Now API", "version": "20251023" },
   "paths": { ... }
 }
 ```
