@@ -1,14 +1,4 @@
 {
-  "METHOD_PERMISSION_MAP": {
-    "timezone": ["entityAndProperties", "entityOnly"],
-    "timezone.txt": ["entityAndProperties", "entityOnly"],
-    "area": ["entityAndProperties", "entityOnly"],
-    "time": ["entityAndProperties", "entityOnly"],
-    "time.txt": ["entityAndProperties", "entityOnly"],
-    "ip": ["entityAndProperties", "entityOnly"],
-    "ip.txt": ["entityAndProperties", "entityOnly"],
-    "logout": ["entityAndProperties"]
-  },
   "MINTING_FEEACCOUNT": "20251018-rodit-org.testnet",
   "MINTING_FEE": "0.1"
 }
