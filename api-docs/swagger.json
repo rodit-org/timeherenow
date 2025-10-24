@@ -323,6 +323,326 @@
           "default": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }
+    },
+    "/mcp/resources": {
+      "get": {
+        "summary": "List available MCP resources",
+        "description": "Returns a list of resources available through the Model Context Protocol interface",
+        "tags": ["MCP"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": { "type": "integer" },
+            "description": "Maximum number of resources to return"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": { "type": "string" },
+            "description": "Cursor for pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of available resources with pagination info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "uri": { "type": "string" },
+                          "name": { "type": "string" },
+                          "type": { "type": "string" }
+                        }
+                      }
+                    },
+                    "nextCursor": { "type": "string", "nullable": true },
+                    "requestId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/mcp/resource/{uri}": {
+      "get": {
+        "summary": "Get a specific MCP resource",
+        "description": "Returns the content of a specific resource",
+        "tags": ["MCP"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uri",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "URI of the resource to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": { "type": "string" },
+                    "content": { "type": "object" },
+                    "requestId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "404": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/mcp/schema": {
+      "get": {
+        "summary": "Get MCP schema",
+        "description": "Returns the OpenAPI schema for the MCP interface",
+        "tags": ["MCP"],
+        "responses": {
+          "200": {
+            "description": "MCP schema",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Get performance metrics",
+        "description": "Returns current performance metrics including request counts and session information",
+        "tags": ["Metrics"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Performance metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requestCount": { "type": "integer" },
+                    "errorCount": { "type": "integer" },
+                    "requestsPerMinute": { "type": "number" },
+                    "currentLoadLevel": { "type": "string" },
+                    "requests": {
+                      "type": "object",
+                      "properties": {
+                        "total": { "type": "integer" },
+                        "errors": { "type": "integer" },
+                        "perMinute": { "type": "number" }
+                      }
+                    },
+                    "sessions": {
+                      "type": "object",
+                      "properties": {
+                        "active": { "type": "integer" },
+                        "active_count": { "type": "integer" }
+                      }
+                    },
+                    "timestamp": { "type": "string" },
+                    "requestId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/metrics/system": {
+      "get": {
+        "summary": "Get system metrics",
+        "description": "Returns system resource metrics including CPU, memory, and uptime",
+        "tags": ["Metrics"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "System metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "metrics": {
+                      "type": "object",
+                      "properties": {
+                        "cpu": {
+                          "type": "object",
+                          "properties": {
+                            "usage": { "type": "number" }
+                          }
+                        },
+                        "memory": {
+                          "type": "object",
+                          "properties": {
+                            "used": { "type": "integer" },
+                            "total": { "type": "integer" }
+                          }
+                        },
+                        "uptime": { "type": "integer" }
+                      }
+                    },
+                    "timestamp": { "type": "integer" },
+                    "requestId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/sessions/list_all": {
+      "get": {
+        "summary": "List all active sessions",
+        "description": "Admin route - Get information about all active sessions",
+        "tags": ["Sessions"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of active sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "roditId": { "type": "string" },
+                          "ownerId": { "type": "string" },
+                          "createdAt": { "type": "string" },
+                          "expiresAt": { "type": "string" },
+                          "lastAccessedAt": { "type": "string" },
+                          "status": { "type": "string" }
+                        }
+                      }
+                    },
+                    "count": { "type": "integer" },
+                    "timestamp": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "403": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/sessions/close": {
+      "post": {
+        "summary": "Close a specific session",
+        "description": "Admin route - Allows administrators to terminate a specific session",
+        "tags": ["Sessions"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sessionId"],
+                "properties": {
+                  "sessionId": { "type": "string", "description": "ID of the session to close" },
+                  "reason": { "type": "string", "description": "Reason for closing the session" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session terminated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "sessionId": { "type": "string" },
+                    "reason": { "type": "string" },
+                    "timestamp": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "403": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "404": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/sessions/cleanup": {
+      "post": {
+        "summary": "Clean up expired sessions",
+        "description": "Triggers cleanup of expired sessions and returns cleanup statistics",
+        "tags": ["Sessions"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Session cleanup completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "removedCount": { "type": "integer" },
+                        "activeSessions": { "type": "integer" },
+                        "totalSessions": { "type": "integer" }
+                      }
+                    },
+                    "requestId": { "type": "string" },
+                    "timestamp": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
     }
   },
   "components": {

@@ -268,6 +268,18 @@ function setupRoutes() {
   app.use("/api", protectedLogoutRoutes);
   const timersRoutes = require("./protected/timers");
   app.use("/api", timersRoutes);
+  
+  // MCP (Model Context Protocol) routes (protected)
+  const mcpRoutes = require("./routes/mcproutes");
+  app.use("/api/mcp", mcpRoutes);
+  
+  // Metrics routes (protected)
+  const metricsRoutes = require("./protected/metricsroutes");
+  app.use("/api/metrics", metricsRoutes);
+  
+  // Session management routes (protected)
+  const sessionRoutes = require("./protected/sessionroutes");
+  app.use("/api/sessions", sessionRoutes);
 
   // Error handling middleware for routes
   app.use((err, req, res, next) => {
@@ -361,6 +373,14 @@ async function startServer() {
           { method: 'PUT', path: '/api/ip', description: 'Get time based on IP' },
           { method: 'PUT', path: '/api/sign/hash', description: 'Sign hash with NEAR timestamp' },
           { method: 'POST', path: '/api/timers/schedule', description: 'Schedule webhook timer' },
+          { method: 'GET', path: '/api/mcp/resources', description: 'List MCP resources' },
+          { method: 'GET', path: '/api/mcp/resource/:uri', description: 'Get MCP resource' },
+          { method: 'GET', path: '/api/mcp/schema', description: 'Get MCP schema' },
+          { method: 'GET', path: '/api/metrics', description: 'Get performance metrics' },
+          { method: 'GET', path: '/api/metrics/system', description: 'Get system metrics' },
+          { method: 'GET', path: '/api/sessions/list_all', description: 'List all sessions (admin)' },
+          { method: 'POST', path: '/api/sessions/close', description: 'Close session (admin)' },
+          { method: 'POST', path: '/api/sessions/cleanup', description: 'Cleanup expired sessions' },
           { method: 'GET', path: '/health', description: 'Health check' },
           { method: 'GET', path: '/api-docs', description: 'API documentation' }
         ]
