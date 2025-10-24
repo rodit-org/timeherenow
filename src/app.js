@@ -362,6 +362,20 @@ async function startServer() {
     // Setup routes
     setupRoutes();
 
+    // Initialize timer persistence (restore timers and start auto-save)
+    try {
+      const timersModule = require("./protected/timers");
+      await timersModule.initializeTimerPersistence(app);
+      logger.info("Timer persistence initialized", {
+        component: 'TimeHereNowAPI'
+      });
+    } catch (timerErr) {
+      logger.warn("Failed to initialize timer persistence", {
+        component: 'TimeHereNowAPI',
+        error: timerErr.message
+      });
+    }
+
     // Expose raw Swagger JSON for tooling access
     app.get('/swagger.json', (req, res) => {
       res.json(swaggerSpec);

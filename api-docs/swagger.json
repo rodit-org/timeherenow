@@ -276,7 +276,7 @@
     "/timers/schedule": {
       "post": {
         "summary": "schedule a delayed webhook using SDK-configured destination.",
-        "description": "Schedules a delayed webhook that fires after the specified delay. **All timestamps (scheduled_at, execute_at, fired_at) use NEAR blockchain time, not system time.** The webhook is sent to the destination configured in the RODiT SDK client. The timer uses blockchain time for both scheduling and firing to ensure tamper-proof timing.",
+        "description": "Schedules a delayed webhook that fires after the specified delay. **All timestamps (scheduled_at, execute_at, fired_at) use NEAR blockchain time, not system time.** The webhook is sent to the destination configured in the RODiT SDK client. The timer uses blockchain time for both scheduling and firing to ensure tamper-proof timing.\n\n**Persistence:** Timers are automatically saved to disk every hour and restored on server restart. Timers that should have already fired are never sent late - they are skipped on restore. Maximum data loss window is 1 hour between auto-saves.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -286,7 +286,7 @@
                 "type": "object",
                 "required": ["delay_seconds"],
                 "properties": {
-                  "delay_seconds": { "type": "number", "minimum": 1, "maximum": 86400, "description": "Delay in seconds before webhook is sent" },
+                  "delay_seconds": { "type": "number", "minimum": 1, "maximum": 172800, "description": "Delay in seconds before webhook is sent (1 second to 48 hours)" },
                   "payload": { "type": "object", "description": "Optional payload echoed back in the webhook" }
                 }
               }
