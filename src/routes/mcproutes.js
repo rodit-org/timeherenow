@@ -57,7 +57,10 @@ const mcpService = {
   async listAvailableResources(req, options = {}) {
     const all = [
       { uri: 'openapi:swagger', name: 'OpenAPI Schema', type: 'application/json' },
-      { uri: 'config:default', name: 'Server Default Config', type: 'application/json' }
+      { uri: 'config:default', name: 'Server Default Config', type: 'application/json' },
+      { uri: 'readme:main', name: 'README Documentation', type: 'text/markdown' },
+      { uri: 'health:status', name: 'Health Status with NEAR Blockchain Info', type: 'application/json' },
+      { uri: 'guide:api', name: 'Comprehensive API Guide', type: 'application/json' }
     ];
     const start = options.cursor ? parseInt(options.cursor, 10) || 0 : 0;
     const limit = options.limit || all.length;
@@ -83,6 +86,108 @@ const mcpService = {
           error: error.message
         });
         throw new Error('Resource unavailable');
+      }
+    }
+    if (uri === 'readme:main') {
+      try {
+        const readmePath = path.join(__dirname, '../../README.md');
+        const content = fs.readFileSync(readmePath, 'utf8');
+        return { type: 'text/markdown', content };
+      } catch (error) {
+        logger.error('Failed to load README.md for MCP resource', {
+          component: 'MCPRoutes',
+          method: 'getResource',
+          uri,
+          error: error.message
+        });
+        throw new Error('Resource unavailable');
+      }
+    }
+    if (uri === 'health:status') {
+      try {
+        // Fetch health status from the health endpoint
+        const axios = require('axios');
+        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+        const response = await axios.get(`${baseUrl}/health`, { timeout: 5000 });
+        return { type: 'application/json', content: response.data };
+      } catch (error) {
+        logger.error('Failed to fetch health status for MCP resource', {
+          component: 'MCPRoutes',
+          method: 'getResource',
+          uri,
+          error: error.message
+        });
+        throw new Error('Health status unavailable');
+      }
+    }
+    if (uri === 'guide:api') {
+      try {
+        // Create comprehensive API guide combining README and swagger
+        const readmePath = path.join(__dirname, '../../README.md');
+        const readme = fs.readFileSync(readmePath, 'utf8');
+        const swagger = loadSwaggerSpec();
+        
+        const guide = {
+          title: 'Time Here Now API - Comprehensive Guide',
+          version: swagger.info?.version || '1.0.0',
+          description: 'Complete API documentation combining README context with OpenAPI specifications',
+          sections: {
+            overview: {
+              description: 'Time Here Now API provides blockchain-based time services using NEAR Protocol',
+              key_features: [
+                'Blockchain time from NEAR (not system/NTP time)',
+                '5 Hz polling for low-latency access',
+                'Timezone data from IANA tzdb',
+                'IP-based geolocation',
+                'Delayed webhooks with blockchain timestamps',
+                'RODiT authentication'
+              ]
+            },
+            blockchain_time: {
+              description: 'All time endpoints use NEAR blockchain time instead of system time',
+              polling: {
+                frequency: '5 Hz (200ms intervals)',
+                cache_ttl: '1 second',
+                block_interval: '~600ms',
+                network_margin: '50ms'
+              },
+              accuracy: {
+                field: 'likely_time_difference_ms',
+                description: 'Conservative >99% likely upper-bound difference between real time and returned time',
+                calculation: 'max(observed_lag, block_interval + poll_interval + network_margin)'
+              },
+              availability: 'Returns HTTP 503 if blockchain time is unavailable'
+            },
+            authentication: {
+              method: 'RODiT mutual authentication',
+              purchase_url: 'https://purchase.timeherenow.com',
+              description: 'RODiT tokens are NFTs on NEAR blockchain representing API access rights. Purchase them at https://purchase.timeherenow.com',
+              flow: [
+                '1. Purchase RODiT tokens at https://purchase.timeherenow.com',
+                '2. Extract RODiT credentials from your NEAR wallet',
+                '3. POST /api/login with roditToken',
+                '4. Receive JWT token in response',
+                '5. Include token in Authorization: Bearer <token> header',
+                '6. POST /api/logout to terminate session'
+              ]
+            },
+            endpoints: swagger.paths,
+            schemas: swagger.components?.schemas || {},
+            readme_full: readme
+          },
+          base_url: swagger.servers?.[0]?.url || 'https://timeherenow.rodit.org:8443/api',
+          external_docs: swagger.externalDocs
+        };
+        
+        return { type: 'application/json', content: guide };
+      } catch (error) {
+        logger.error('Failed to create API guide for MCP resource', {
+          component: 'MCPRoutes',
+          method: 'getResource',
+          uri,
+          error: error.message
+        });
+        throw new Error('API guide unavailable');
       }
     }
     throw new Error(`Unknown resource: ${uri}`);

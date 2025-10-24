@@ -14,7 +14,7 @@
 
 *Protected Endpoints (require authentication):*
 - `POST /api/logout` - Logout
-- `POST /api/timers/schedule` - Schedule delayed webhook (SDK destination)
+- `POST /api/timers/schedule` - Schedule delayed webhook (Client RODiT destination)
 - `POST /api/timezone` - List all IANA timezones
 - `POST /api/timezone/area` - List timezones for a given area
 - `POST /api/timezone/time` - Get current time for a timezone (or by client IP)
@@ -144,10 +144,91 @@ Fields in bold are the canonical set used by clients: `user_ip`, `date_time`, `d
   - `NEAR_BLOCK_MS` (default `600`): expected block interval in ms
   - `NEAR_NET_MARGIN_MS` (default `50`): network jitter margin in ms
 
+#### Getting Started: Purchasing RODiT Tokens
+
+**Purchase RODiT tokens for Time Here Now API at: https://purchase.timeherenow.com**
+
+##### What are RODiT Tokens?
+
+RODiT (Rights Of Data In Transit) tokens are NFTs on the NEAR blockchain that represent API access rights. Authentication between API clients uses Public Key Cryptography (PKC) with a unique approach: ownership of the RODiTs is verified with the NEAR Protocol in real time, and the PKC key pair used is embedded in the RODiT token itself.
+
+Read more: https://vaceituno.medium.com/unleashing-the-power-of-public-key-cryptography-with-non-fungible-tokens-513286d47524
+
+Each RODiT token contains:
+- **Authentication credentials** (public/private key pairs)
+- **API service configuration** (endpoints, permissions, rate limits)
+- **Subscription information** (start date, expiration date)
+- **Network access parameters** (IP ranges, ports, bandwidth limits)
+
+##### How to Purchase
+
+**Step 1: Get NEAR Tokens**
+
+Before purchasing RODiT tokens, you need NEAR tokens in your wallet:
+
+- **For Production (Mainnet)**: Purchase NEAR from exchanges like Binance, Coinbase, Kraken, KuCoin, or Gate.io
+- **For Testing (Testnet)**: Get free testnet NEAR from https://near-faucet.io/
+- **Amount needed**: 0.1-1 NEAR is typically sufficient for testing
+
+**Step 2: Access the Purchase Portal**
+
+1. Navigate to **https://purchase.timeherenow.com**
+2. Connect your NEAR wallet (NEAR Wallet, MyNearWallet, Meteor Wallet, etc.)
+3. Ensure you're on the correct network (testnet or mainnet)
+
+**Step 3: Configure and Purchase**
+
+1. Browse available API services and pricing
+2. Select the Time Here Now API service
+3. Choose the number of client RODiTs needed
+4. Review configuration parameters (expiration dates, network settings, bandwidth limits)
+5. Confirm the transaction in your NEAR wallet
+6. Wait for blockchain confirmation (1-2 seconds)
+
+**Step 4: Retrieve Your RODiT Tokens**
+
+After purchase, your RODiT tokens will appear in your wallet. Extract the credentials for API authentication:
+
+```bash
+# View your RODiT tokens
+near contract call-function as-read-only <CONTRACT_ID> nft_tokens_for_owner \
+  json-args '{"account_id": "<YOUR_ACCOUNT>"}' \
+  network-config testnet now
+
+# Get specific RODiT metadata
+near contract call-function as-read-only <CONTRACT_ID> nft_token \
+  json-args '{"token_id": "<TOKEN_ID>"}' \
+  network-config testnet now
+```
+
+**Step 5: Use Your RODiT Token**
+
+- Extract the private key from your RODiT for authentication
+- Configure your API client with the network parameters from the RODiT metadata
+- Use the RODiT token in the `/api/login` endpoint to obtain a session JWT
+
+##### Important Security Notes
+
+- **Never expose private keys** in logs or public repositories
+- **Use environment variables** or secure vaults for credential storage
+- **Monitor expiration dates** and renew RODiT tokens before they expire
+- **Verify RODiT ownership** on-chain before each API session
+
+##### For AI Agents: Automated Purchase Flow
+
+1. Ensure wallet is funded with sufficient NEAR (purchase price + ~0.1 NEAR for gas)
+2. Use NEAR API or CLI to interact with the RODiT marketplace contract at https://purchase.timeherenow.com
+3. Call the purchase/mint function with required parameters
+4. Parse the transaction result to extract token IDs
+5. Query token metadata to retrieve configuration
+6. Store credentials securely in your configuration management system
+
+---
+
 #### Authentication Endpoints
 
 ##### POST /login
-RODiT mutual authentication endpoint for obtaining session tokens.
+RODiT mutual authentication endpoint for obtaining session tokens using your purchased RODiT credentials.
 
 **Request Body**:
 ```json

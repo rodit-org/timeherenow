@@ -3,7 +3,7 @@
   "info": {
     "title": "Time Here Now API",
     "version": "20251023",
-    "description": "API to get the current time based on timezone or client IP. Time zones and offsets are sourced from the IANA Time Zone Database (tzdb)."
+    "description": "API to get the current time based on timezone or client IP. **IMPORTANT: All time values are sourced from NEAR blockchain, NOT system/NTP time.** The API polls NEAR blockchain at 5 Hz (200ms intervals) and serves cached blockchain timestamps. Time zones and offsets are sourced from the IANA Time Zone Database (tzdb). Returns HTTP 503 if blockchain time is unavailable."
   },
   "servers": [
     { "url": "https://timeherenow.rodit.org:8443/api" },
@@ -147,6 +147,7 @@
     "/timezone/time": {
       "post": {
         "summary": "request the current time for a timezone (falls back to user IP if timezone is omitted).",
+        "description": "Returns current time for the specified timezone using NEAR blockchain time (not system/NTP time). The API polls NEAR blockchain at 5Hz and serves cached timestamps. If timezone is omitted, determines timezone from the user's IP address. Returns HTTP 503 if blockchain time is unavailable.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -208,6 +209,7 @@
     "/ip": {
       "post": {
         "summary": "request the current time based on the ip of the request or provided IP (IPv4 or IPv6).",
+        "description": "Returns current time for the timezone determined from the client's IP address (or provided IP) using NEAR blockchain time (not system/NTP time). Uses geoip-lite for IP-to-timezone resolution. Returns HTTP 503 if blockchain time is unavailable.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": false,
@@ -240,6 +242,7 @@
     "/sign/hash": {
       "post": {
         "summary": "Sign a base64url-encoded hash concatenated with the latest NEAR timestamp, likely_time_difference_ms, and public key.",
+        "description": "Signs a hash with NEAR blockchain timestamp to create a tamper-proof timestamped signature. The signature covers: hash + blockchain_timestamp + likely_time_difference_ms + public_key. This proves the hash existed at or before the blockchain time. Returns HTTP 503 if blockchain time is unavailable.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -273,6 +276,7 @@
     "/timers/schedule": {
       "post": {
         "summary": "schedule a delayed webhook using SDK-configured destination.",
+        "description": "Schedules a delayed webhook that fires after the specified delay. **All timestamps (scheduled_at, execute_at, fired_at) use NEAR blockchain time, not system time.** The webhook is sent to the destination configured in the RODiT SDK client. The timer uses blockchain time for both scheduling and firing to ensure tamper-proof timing.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -756,7 +760,7 @@
           },
           "likely_time_difference_ms": {
             "type": "integer",
-            "description": "conservative >99% likely upper-bound difference (milliseconds) between real time and the returned time, based on 5Hz polling and ~0.6s block interval"
+            "description": "Conservative >99% likely upper-bound difference (milliseconds) between real time and the returned blockchain time. Calculated as max(observed_lag, block_interval + poll_interval + network_margin). With 5Hz polling (200ms), ~600ms block interval, and 50ms network margin, this is typically 850ms. This represents the maximum expected staleness of the cached NEAR blockchain timestamp."
           }
         }
       },
@@ -764,20 +768,21 @@
         "type": "object",
         "required": ["status", "timestamp"],
         "properties": {
-          "status": { "type": "string", "enum": ["healthy", "unhealthy"] },
-          "endpoint": { "type": "string" },
-          "error": { "type": "string" },
-          "timestamp": { "type": "string", "description": "ISO 8601 timestamp" },
-          "cache_available": { "type": "boolean" },
-          "last_fetch_timestamp": { "type": "string", "nullable": true },
-          "last_fetch_age_ms": { "type": "integer", "nullable": true },
-          "last_block_timestamp": { "type": "string", "nullable": true },
-          "last_block_age_ms": { "type": "integer", "nullable": true },
-          "poll_interval_ms": { "type": "integer" },
-          "block_interval_ms": { "type": "integer" },
-          "network_margin_ms": { "type": "integer" },
-          "likely_time_difference_ms": { "type": "integer", "nullable": true }
-        }
+          "status": { "type": "string", "enum": ["healthy", "unhealthy"], "description": "Health status of NEAR blockchain connection" },
+          "endpoint": { "type": "string", "description": "NEAR RPC endpoint URL" },
+          "error": { "type": "string", "description": "Error message if unhealthy" },
+          "timestamp": { "type": "string", "description": "ISO 8601 timestamp from NEAR blockchain" },
+          "cache_available": { "type": "boolean", "description": "Whether cached blockchain time is available" },
+          "last_fetch_timestamp": { "type": "string", "nullable": true, "description": "When the last RPC fetch occurred (system time)" },
+          "last_fetch_age_ms": { "type": "integer", "nullable": true, "description": "Milliseconds since last RPC fetch" },
+          "last_block_timestamp": { "type": "string", "nullable": true, "description": "Timestamp from the last NEAR block" },
+          "last_block_age_ms": { "type": "integer", "nullable": true, "description": "Milliseconds since the last block timestamp" },
+          "poll_interval_ms": { "type": "integer", "description": "Polling frequency in milliseconds (default 200ms for 5Hz)" },
+          "block_interval_ms": { "type": "integer", "description": "Expected NEAR block interval in milliseconds (default 600ms)" },
+          "network_margin_ms": { "type": "integer", "description": "Network jitter margin in milliseconds (default 50ms)" },
+          "likely_time_difference_ms": { "type": "integer", "nullable": true, "description": "Conservative upper-bound staleness of cached blockchain time" }
+        },
+        "description": "NEAR blockchain time polling status. The API polls NEAR at 5Hz and caches the latest block timestamp to minimize latency and RPC load."
       },
       "HealthResponse": {
         "type": "object",
@@ -856,11 +861,12 @@
         "required": ["timer_id", "delay_seconds", "scheduled_at", "execute_at"],
         "properties": {
           "timer_id": { "type": "string", "description": "ULID identifying the scheduled timer" },
-          "delay_seconds": { "type": "number" },
-          "scheduled_at": { "type": "string", "description": "ISO 8601 timestamp when scheduling occurred" },
-          "execute_at": { "type": "string", "description": "ISO 8601 timestamp when webhook is scheduled to fire" },
+          "delay_seconds": { "type": "number", "description": "Delay in seconds before webhook fires" },
+          "scheduled_at": { "type": "string", "description": "ISO 8601 timestamp when scheduling occurred (NEAR blockchain time)" },
+          "execute_at": { "type": "string", "description": "ISO 8601 timestamp when webhook is scheduled to fire (NEAR blockchain time)" },
           "requestId": { "type": "string", "description": "Server request correlation ID" }
-        }
+        },
+        "description": "Response when scheduling a timer. The webhook payload will include these fields plus 'fired_at' (actual firing time from blockchain) and 'payload' (echoed from request)."
       }
     },
     "securitySchemes": {

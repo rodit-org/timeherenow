@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { ulid } = require('ulid');
 const { logger } = require('@rodit/rodit-auth-be');
+const TimeZoneService = require('../lib/timezone-service');
+
+// Initialize timezone service for blockchain time
+const timezoneService = new TimeZoneService();
 
 router.use(express.json());
 
@@ -35,7 +39,9 @@ router.post('/timers/schedule', async (req, res) => {
   
 
   const timerId = ulid();
-  const now = Date.now();
+  
+  // Use blockchain time from NEAR instead of system time
+  const now = timezoneService._getCachedNearMsOrThrow();
   const delayMs = Math.floor(delay_seconds * 1000);
   const scheduledAt = new Date(now).toISOString();
   const executeAt = new Date(now + delayMs).toISOString();
@@ -65,7 +71,9 @@ router.post('/timers/schedule', async (req, res) => {
   logger.infoWithContext('Timer scheduled', ctx);
 
   const handle = setTimeout(async () => {
-    const firedAt = new Date().toISOString();
+    // Use blockchain time from NEAR for webhook timestamp
+    const firedAtMs = timezoneService._getCachedNearMsOrThrow();
+    const firedAt = new Date(firedAtMs).toISOString();
     const body = {
       timer_id: timerId,
       scheduled_at: scheduledAt,
@@ -76,13 +84,14 @@ router.post('/timers/schedule', async (req, res) => {
       payload
     };
     try {
-      const start = Date.now();
+      // Use blockchain time for duration measurement
+      const start = timezoneService._getCachedNearMsOrThrow();
       const client = req.app?.locals?.roditClient;
       if (!client || typeof client.send_webhook !== 'function') {
         throw new Error('Webhook sender unavailable');
       }
       await client.send_webhook(body, req);
-      const duration = Date.now() - start;
+      const duration = timezoneService._getCachedNearMsOrThrow() - start;
       logger.infoWithContext('Timer callback sent', { ...ctx, firedAt, duration });
       logger.metric('timer_callback', duration, { result: 'success' });
     } catch (error) {
