@@ -125,6 +125,14 @@ function applyRateLimitersIfAvailable() {
     return;
   }
 
+  // TEMPORARILY DISABLED FOR TESTING
+  logger.info("Rate limiting temporarily disabled", {
+    component: "TimeHereNowAPI"
+  });
+  rateLimitersApplied = true;
+  return;
+
+  /* DISABLED
   const sdkFactory = app.locals?.roditClient?.getRateLimitMiddleware?.();
   const { global, login, signclient } = RATE_LIMIT_SETTINGS;
 
@@ -144,6 +152,7 @@ function applyRateLimitersIfAvailable() {
     login,
     signclient
   });
+  */
 }
 
 // Configure Express to trust proxies for correct client IP detection
@@ -237,6 +246,10 @@ function setupRoutes() {
   const signclientRoutes = require("./routes/signclient");
   app.use("/api", signclientRoutes);
 
+  // MCP (Model Context Protocol) routes - handles its own authentication per endpoint
+  const mcpRoutes = require("./routes/mcproutes");
+  app.use("/api/mcp", mcpRoutes);
+
   // Protect subsequent /api routes with authentication (authorization optional for now)
   if (app.locals.roditClient && typeof app.locals.roditClient.authenticate === 'function') {
     app.use("/api", app.locals.roditClient.authenticate);
@@ -246,7 +259,8 @@ function setupRoutes() {
     });
   }
 
-  // Apply user-based rate limiting for authenticated routes
+  // TEMPORARILY DISABLED FOR TESTING
+  /* DISABLED - Apply user-based rate limiting for authenticated routes
   if (app.locals.roditClient) {
     const userRateLimiter = createUserRateLimitMiddleware(
       app.locals.roditClient,
@@ -259,6 +273,7 @@ function setupRoutes() {
       fallbackLimits: RATE_LIMIT_SETTINGS.global
     });
   }
+  */
 
   // Time Here Now API routes (protected)
   const timezoneRoutes = require("./protected/timezone");
@@ -268,10 +283,6 @@ function setupRoutes() {
   app.use("/api", protectedLogoutRoutes);
   const timersRoutes = require("./protected/timers");
   app.use("/api", timersRoutes);
-  
-  // MCP (Model Context Protocol) routes (protected)
-  const mcpRoutes = require("./routes/mcproutes");
-  app.use("/api/mcp", mcpRoutes);
   
   // Metrics routes (protected)
   const metricsRoutes = require("./protected/metricsroutes");

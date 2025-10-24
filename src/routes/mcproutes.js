@@ -119,7 +119,7 @@ const mcpService = {
  *       401:
  *         description: Unauthorized
  */
-router.get('/resources', async (req, res) => {
+router.get('/resources', authenticate_apicall, async (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   
@@ -342,7 +342,7 @@ router.get('/resource/:uri(*)', authenticate_apicall, async (req, res) => {
  *       200:
  *         description: MCP schema
  */
-router.get('/schema', async (req, res) => {
+router.get('/schema', authenticate_apicall, async (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   
