@@ -421,6 +421,7 @@
         "summary": "Get MCP schema",
         "description": "Returns the OpenAPI schema for the MCP interface",
         "tags": ["MCP"],
+        "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {
             "description": "MCP schema",
@@ -430,6 +431,7 @@
               }
             }
           },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
           "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
       }

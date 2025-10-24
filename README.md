@@ -21,6 +21,14 @@
 - `POST /api/timezones/by-country` - List timezones by ISO country code
 - `POST /api/ip` - Get current time with location obtained from the IP (IPv4 or IPv6)
 - `POST /api/sign/hash` - Sign a hash with NEAR timestamp
+- `GET /api/mcp/resources` - List available MCP resources
+- `GET /api/mcp/resource/:uri` - Get specific MCP resource
+- `GET /api/mcp/schema` - Get MCP OpenAPI schema
+- `GET /api/metrics` - Get performance metrics
+- `GET /api/metrics/system` - Get system resource metrics
+- `GET /api/sessions/list_all` - List all active sessions (admin)
+- `POST /api/sessions/revoke` - Revoke a specific session (admin)
+- `POST /api/sessions/cleanup` - Clean up expired sessions
 
 
 **Authentication**: Protected endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.
@@ -345,6 +353,204 @@ Schedules a delayed webhook to the SDK-configured destination. Returns a ULID im
   "user_id": "string",
   "session_key": "string",
   "payload": { "any": "json" }
+}
+```
+
+#### MCP (Model Context Protocol) Endpoints
+
+##### GET /api/mcp/resources
+List available MCP resources for AI model access.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Query Parameters**:
+- `limit` (optional): Maximum number of resources to return
+- `cursor` (optional): Pagination cursor
+
+**Response (200)**:
+```json
+{
+  "resources": [
+    {
+      "uri": "openapi:swagger",
+      "name": "OpenAPI Schema",
+      "type": "application/json"
+    },
+    {
+      "uri": "config:default",
+      "name": "Server Default Config",
+      "type": "application/json"
+    },
+    {
+      "uri": "readme:main",
+      "name": "README Documentation",
+      "type": "text/markdown"
+    },
+    {
+      "uri": "health:status",
+      "name": "Health Status with NEAR Blockchain Info",
+      "type": "application/json"
+    },
+    {
+      "uri": "guide:api",
+      "name": "Comprehensive API Guide",
+      "type": "application/json"
+    }
+  ],
+  "nextCursor": null,
+  "requestId": "01JD8X..."
+}
+```
+
+##### GET /api/mcp/resource/:uri
+Get a specific MCP resource by URI.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Path Parameters**:
+- `uri`: Resource URI (e.g., `openapi:swagger`, `config:default`, `readme:main`, `health:status`, `guide:api`)
+
+**Response (200)**:
+```json
+{
+  "type": "application/json",
+  "content": { ... },
+  "requestId": "01JD8X..."
+}
+```
+
+##### GET /api/mcp/schema
+Get the OpenAPI schema for the MCP interface.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**:
+```json
+{
+  "openapi": "3.0.1",
+  "info": { ... },
+  "paths": { ... },
+  "requestId": "01JD8X..."
+}
+```
+
+#### Metrics Endpoints
+
+##### GET /api/metrics
+Get current performance metrics including request counts and session information.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**:
+```json
+{
+  "requestCount": 1234,
+  "errorCount": 5,
+  "requestsPerMinute": 20.5,
+  "currentLoadLevel": "low",
+  "requests": {
+    "total": 1234,
+    "errors": 5,
+    "perMinute": 20.5
+  },
+  "sessions": {
+    "active": 10,
+    "active_count": 10
+  },
+  "timestamp": "2025-10-24T16:18:00.000Z",
+  "requestId": "01JD8X..."
+}
+```
+
+##### GET /api/metrics/system
+Get system resource metrics including CPU, memory, and uptime.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**:
+```json
+{
+  "metrics": {
+    "cpu": {
+      "usage": 25.5
+    },
+    "memory": {
+      "used": 524288000,
+      "total": 2147483648
+    },
+    "uptime": 86400
+  },
+  "timestamp": 1729787880000,
+  "requestId": "01JD8X..."
+}
+```
+
+#### Session Management Endpoints
+
+##### GET /api/sessions/list_all
+List all active sessions (admin only).
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**:
+```json
+{
+  "sessions": [
+    {
+      "id": "session_123",
+      "roditId": "rodit_456",
+      "ownerId": "user_789",
+      "createdAt": "2025-10-24T10:00:00.000Z",
+      "expiresAt": "2025-10-24T18:00:00.000Z",
+      "lastAccessedAt": "2025-10-24T16:00:00.000Z",
+      "status": "active"
+    }
+  ],
+  "count": 1,
+  "timestamp": "2025-10-24T16:18:00.000Z"
+}
+```
+
+##### POST /api/sessions/revoke
+Revoke a specific session (admin only).
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Request Body**:
+```json
+{
+  "sessionId": "session_123",
+  "reason": "admin_termination"
+}
+```
+
+**Response (200)**:
+```json
+{
+  "message": "Session terminated successfully",
+  "sessionId": "session_123",
+  "reason": "admin_termination",
+  "timestamp": "2025-10-24T16:18:00.000Z"
+}
+```
+
+##### POST /api/sessions/cleanup
+Clean up expired sessions.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**:
+```json
+{
+  "success": true,
+  "message": "Session cleanup completed",
+  "stats": {
+    "removedCount": 5,
+    "activeSessions": 10,
+    "totalSessions": 10
+  },
+  "requestId": "01JD8X...",
+  "timestamp": "2025-10-24T16:18:00.000Z"
 }
 ```
 
