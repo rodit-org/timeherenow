@@ -6,7 +6,7 @@
 **Available Endpoints**:
 
 *Public Endpoints (no authentication required):*
-- `POST /api/login` - Authentication
+- `POST /api/login` - Authentication.
 - `POST /api/signclient` - Sign client RODiT token
 - `GET /health` - Health check
 - `GET /api-docs` - Interactive API documentation (Swagger UI)
