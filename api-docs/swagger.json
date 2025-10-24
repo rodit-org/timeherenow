@@ -566,9 +566,9 @@
         }
       }
     },
-    "/sessions/close": {
+    "/sessions/revoke": {
       "post": {
-        "summary": "Close a specific session",
+        "summary": "Revoke a specific session",
         "description": "Admin route - Allows administrators to terminate a specific session",
         "tags": ["Sessions"],
         "security": [{ "bearerAuth": [] }],

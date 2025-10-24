@@ -344,6 +344,36 @@ async function startServer() {
       const loggingMiddleware = authClient.getLoggingMiddleware();
       app.use(loggingMiddleware);
       
+      // Apply performance tracking middleware to track request counts
+      const performanceService = authClient.getPerformanceService();
+      if (performanceService && typeof performanceService.middleware === 'function') {
+        app.use(performanceService.middleware());
+        logger.info("Performance tracking middleware applied", {
+          component: 'TimeHereNowAPI'
+        });
+      } else if (performanceService && typeof performanceService.trackRequest === 'function') {
+        // Fallback: manually track requests if middleware method doesn't exist
+        app.use((req, res, next) => {
+          performanceService.trackRequest();
+          res.on('finish', () => {
+            if (res.statusCode >= 400) {
+              performanceService.trackError?.();
+            }
+          });
+          next();
+        });
+        logger.info("Manual request tracking middleware applied", {
+          component: 'TimeHereNowAPI'
+        });
+      } else {
+        logger.warn("Performance tracking not available from SDK", {
+          component: 'TimeHereNowAPI',
+          hasPerformanceService: !!performanceService,
+          performanceServiceType: performanceService?.constructor?.name,
+          availableMethods: performanceService ? Object.getOwnPropertyNames(Object.getPrototypeOf(performanceService)) : []
+        });
+      }
+      
       logger.info("Authentication client initialized", {
         component: 'TimeHereNowAPI',
         service: SERVICE_NAME
@@ -404,7 +434,7 @@ async function startServer() {
           { method: 'GET', path: '/api/metrics', description: 'Get performance metrics' },
           { method: 'GET', path: '/api/metrics/system', description: 'Get system metrics' },
           { method: 'GET', path: '/api/sessions/list_all', description: 'List all sessions (admin)' },
-          { method: 'POST', path: '/api/sessions/close', description: 'Close session (admin)' },
+          { method: 'POST', path: '/api/sessions/revoke', description: 'Revoke session (admin)' },
           { method: 'POST', path: '/api/sessions/cleanup', description: 'Cleanup expired sessions' },
           { method: 'GET', path: '/health', description: 'Health check' },
           { method: 'GET', path: '/api-docs', description: 'API documentation' }

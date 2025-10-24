@@ -290,12 +290,12 @@ router.post('/cleanup', authenticate_apicall, async (req, res) => {
 });
 
 /**
- * POST /api/sessions/close - Close a specific session (admin only)
+ * POST /api/sessions/revoke - Revoke a specific session (admin only)
  * 
  * Allows administrators to terminate a specific session
  * Protected: Requires authentication and admin privileges
  */
-router.post('/close', authenticate_apicall, authorize, (req, res) => {
+router.post('/revoke', authenticate_apicall, authorize, (req, res) => {
   const requestId = ulid();
   const startTime = Date.now();
   const { sessionId } = req.body;
