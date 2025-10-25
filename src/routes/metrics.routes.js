@@ -18,16 +18,12 @@ const authenticate_apicall = (req, res, next) => {
 };
 const { createLogContext, logErrorWithMetrics } = logger;
 
-// Get performance service from centralized client when available
+// Get performance service from app.locals (must be initialized at startup)
 const getPerformanceService = (req) => {
-  // First try to get the stored instance from app.locals (same instance used by middleware)
-  if (req?.app?.locals?.performanceService) {
-    return req.app.locals.performanceService;
+  if (!req?.app?.locals?.performanceService) {
+    throw new Error('Performance service not initialized');
   }
-  // Fallback to getting from client
-  const client = req?.app?.locals?.roditClient;
-  if (!client) throw new Error('Authentication service unavailable');
-  return client.getPerformanceService();
+  return req.app.locals.performanceService;
 };
 
 /**

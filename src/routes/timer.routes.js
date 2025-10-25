@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const { ulid } = require('ulid');
-const { logger, RoditClient } = require('@rodit/rodit-auth-be');
-const TimeZoneService = require('../lib/timezone-service');
-const TimerPersistence = require('../lib/timer-persistence');
+const { logger } = require('@rodit/rodit-auth-be');
+const TimeZoneService = require('../services/timezone.service');
+const TimerPersistence = require('../services/timer-persistence.service');
 
-// Create SDK client instance for authorization
-const sdkClient = new RoditClient();
-
-// Create authorization middleware
+// Authorization middleware - uses app.locals.roditClient
 const authorize = (req, res, next) => {
-  return sdkClient.authorize(req, res, next);
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authorization service unavailable' });
+  }
+  return client.authorize(req, res, next);
 };
 
 // Initialize timezone service for blockchain time

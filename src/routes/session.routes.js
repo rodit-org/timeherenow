@@ -10,27 +10,32 @@
 const express = require('express');
 const router = express.Router();
 const { ulid } = require('ulid');
-const { RoditClient } = require('@rodit/rodit-auth-be');
+const { logger } = require('@rodit/rodit-auth-be');
 
-// Create SDK client instance to access all functionality
-const sdkClient = new RoditClient();
-const logger = sdkClient.getLogger();
-// Get session manager instance from SDK (avoids ReferenceError)
-sdkClient.getSessionManager = sdkClient.getSessionManager || (() => ({
-  getAllSessions: async () => [],
-  getActiveSessionCount: async () => 0,
-  cleanupExpiredSessions: async () => ({ removedCount: 0 }),
-  closeSession: () => false
-}));
-const sessionManager = sdkClient.getSessionManager();
-
-// Create authentication middleware using the client instance
+// Authentication middleware - uses app.locals.roditClient
 const authenticate_apicall = (req, res, next) => {
-  return sdkClient.authenticate(req, res, next);
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authentication service unavailable' });
+  }
+  return client.authenticate(req, res, next);
 };
 
 const authorize = (req, res, next) => {
-  return sdkClient.authorize(req, res, next);
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authorization service unavailable' });
+  }
+  return client.authorize(req, res, next);
+};
+
+// Helper to get session manager from app.locals.roditClient
+const getSessionManager = (req) => {
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    throw new Error('RoditClient not available');
+  }
+  return client.getSessionManager();
 };
 
 /**
@@ -51,6 +56,9 @@ router.get('/list_all', authenticate_apicall, authorize, async (req, res) => {
   try {
     // Gather all sessions using the proper storage interface
     const sessions = [];
+    
+    // Get session manager from app.locals.roditClient
+    const sessionManager = getSessionManager(req);
     
     // Get all sessions from storage
     const allSessions = await sessionManager.getAllSessions();
@@ -124,13 +132,8 @@ router.post('/cleanup', authenticate_apicall, authorize, async (req, res) => {
   logger.info('Session cleanup requested', baseContext);
   
   try {
-    if (!sessionManager) {
-      logger.error('Session manager not available', baseContext);
-      return res.status(503).json({
-        error: 'Session service unavailable',
-        requestId
-      });
-    }
+    // Get session manager from app.locals.roditClient
+    const sessionManager = getSessionManager(req);
     
     // Get active sessions count before cleanup
     const activeBefore = await sessionManager.getActiveSessionCount();
@@ -242,6 +245,9 @@ router.post('/revoke', authenticate_apicall, authorize, (req, res) => {
       reason,
       adminUser: req.user.id
     });
+    
+    // Get session manager from app.locals.roditClient
+    const sessionManager = getSessionManager(req);
     
     const sessionClosed = sessionManager.closeSession(sessionId, reason);
     

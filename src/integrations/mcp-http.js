@@ -12,7 +12,7 @@ const { logger } = require('@rodit/rodit-auth-be');
 
 // Import the local MCP service implementation
 // This is application-specific and not part of the rodit-auth-be package
-const mcpService = require('../routes/mcproutes').mcpService;
+const mcpService = require('../routes/mcp.routes').mcpService;
 
 /**
  * Mounts the MCP Streamable HTTP transport on the provided Express `app`.

@@ -67,4 +67,61 @@ router.post('/login', async (req, res) => {
   await client.login_client(req, res);
 });
 
+/**
+ * POST /api/logout
+ * Logout endpoint - terminates the current session
+ * Protected: Requires authentication
+ */
+router.post('/logout', async (req, res) => {
+  req.logAction = "logout-attempt";
+  logger.info("Logout request received", {
+    component: "AuthRoutes",
+    method: "logout",
+    requestId: req.requestId || ulid(),
+    path: req.originalUrl,
+    ip: req.ip,
+    userId: req.user?.id,
+    userAgent: req.get('User-Agent')
+  });
+  
+  // Use the shared RoditClient stored in app.locals
+  const client = req.app.locals.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authentication service unavailable' });
+  }
+  
+  // Check if the logout_client method exists
+  if (typeof client.logout_client !== 'function') {
+    logger.error("logout_client method not available on roditClient", {
+      component: "AuthRoutes",
+      method: "logout",
+      requestId: req.requestId || ulid()
+    });
+    return res.status(503).json({ 
+      error: 'Logout service unavailable',
+      details: 'logout_client method not found on authentication service'
+    });
+  }
+  
+  try {
+    await client.logout_client(req, res);
+  } catch (error) {
+    logger.error("Error calling logout_client", {
+      component: "AuthRoutes",
+      method: "logout",
+      requestId: req.requestId || ulid(),
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      }
+    });
+    return res.status(500).json({
+      error: 'Logout failed',
+      message: error.message,
+      requestId: req.requestId || ulid()
+    });
+  }
+});
+
 module.exports = router;

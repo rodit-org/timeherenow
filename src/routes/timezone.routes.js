@@ -6,16 +6,16 @@ const net = require('net');
 const router = express.Router();
 const base64url = require('base64url');
 const nacl = require('tweetnacl');
-const TimeZoneService = require('../lib/timezone-service');
-const { RoditClient } = require('@rodit/rodit-auth-be');
+const TimeZoneService = require('../services/timezone.service');
+const { logger } = require('@rodit/rodit-auth-be');
 
-// Create SDK client instance for authorization
-const sdkClient = new RoditClient();
-const logger = sdkClient.getLogger();
-
-// Create authorization middleware
+// Authorization middleware - uses app.locals.roditClient
 const authorize = (req, res, next) => {
-  return sdkClient.authorize(req, res, next);
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authorization service unavailable' });
+  }
+  return client.authorize(req, res, next);
 };
 
 // Initialize timezone service

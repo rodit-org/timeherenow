@@ -1,6 +1,7 @@
 // Copyright (c) 2024 Discernible, Inc. All rights reserved.
   // Time Here Now - API Service
 
+  const config = require('config');
   const geoip = require('geoip-lite');
   const { getTimeZones } = require('@vvo/tzdb');
   const { blockchainService } = require('@rodit/rodit-auth-be');
@@ -23,9 +24,9 @@ class TimeZoneService {
     
     // NEAR polling cache and settings
     this.nearCache = { ms: null, iso: null, fetchedAt: 0 };
-    this._pollIntervalMs = parseInt(process.env.NEAR_POLL_MS) || 200; // 5 Hz
-    this._blockIntervalMs = parseInt(process.env.NEAR_BLOCK_MS) || 500; // ~0.5s
-    this._networkMarginMs = parseInt(process.env.NEAR_NET_MARGIN_MS) || 50;
+    this._pollIntervalMs = config.get('NEAR_POLL_MS');
+    this._blockIntervalMs = config.get('NEAR_BLOCK_MS');
+    this._networkMarginMs = config.get('NEAR_NET_MARGIN_MS');
 
     // Start background polling
     this._startNearPolling();
@@ -57,7 +58,7 @@ class TimeZoneService {
       const timestampNs = await blockchainService.nearorg_rpc_timestamp();
       const ms = Math.floor(timestampNs / 1_000_000);
       const isoString = new Date(ms).toISOString();
-      const rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
+      const rpcEndpoint = config.get('NEAR_RPC_URL');
       const now = Date.now();
       const cache = this.nearCache || {};
       const cacheAvailable = typeof cache.ms === 'number' && !Number.isNaN(cache.ms);
@@ -81,7 +82,7 @@ class TimeZoneService {
         likely_time_difference_ms: likelyDiff
       };
     } catch (error) {
-      const rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
+      const rpcEndpoint = config.get('NEAR_RPC_URL');
       return {
         status: 'unhealthy',
         endpoint: rpcEndpoint,

@@ -1,10 +1,6 @@
 {
   "RATE_LIMITING": {
     "enabled": false,
-    "global": {
-      "max": 240,
-      "windowMinutes": 1
-    },
     "login": {
       "max": 20,
       "windowMinutes": 1

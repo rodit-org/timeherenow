@@ -7,7 +7,7 @@
   },
   "servers": [
     { "url": "https://timeherenow.rodit.org:8443/api" },
-    { "url": "http://localhost:3000/api" }
+    { "url": "http://localhost:8080/api" }
   ],
   "externalDocs": {
     "description": "IANA Time Zone Database (tzdb)",
@@ -311,7 +311,7 @@
     "/health": {
       "servers": [
         { "url": "https://timeherenow.rodit.org" },
-        { "url": "http://localhost:3000" }
+        { "url": "http://localhost:8080" }
       ],
       "get": {
         "summary": "Server health (includes NEAR status)",

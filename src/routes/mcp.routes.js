@@ -5,22 +5,20 @@
  * allowing AI models to access structured data from the application.
  */
 
+const config = require('config');
 const express = require('express');
 const router = express.Router();
 const { ulid } = require('ulid');
-const { RoditClient } = require('@rodit/rodit-auth-be');
-const fs = require('fs');
-const path = require('path');
+const { logger } = require('@rodit/rodit-auth-be');
 
-// Create SDK client instance to access all functionality
-const sdkClient = new RoditClient();
-
-// Create authentication middleware using the client instance
+// Authentication middleware - uses app.locals.roditClient
 const authenticate_apicall = (req, res, next) => {
-  return sdkClient.authenticate(req, res, next);
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authentication service unavailable' });
+  }
+  return client.authenticate(req, res, next);
 };
-const logger = sdkClient.getLogger();
-// Note: mcpService may need to be accessed through a different method if available
 
 const { createLogContext, logErrorWithMetrics } = logger;
 
@@ -33,9 +31,8 @@ const mcpCache = {
 function loadSwaggerSpec() {
   if (mcpCache.swagger) return mcpCache.swagger;
   try {
-    const swaggerPath = path.join(__dirname, '../../api-docs/swagger.json');
-    const raw = fs.readFileSync(swaggerPath, 'utf8');
-    mcpCache.swagger = JSON.parse(raw);
+    // Load swagger spec from require (already parsed JSON)
+    mcpCache.swagger = require('../../api-docs/swagger.json');
     return mcpCache.swagger;
   } catch (error) {
     logger.error('Failed to load swagger.json for MCP schema', {
@@ -46,7 +43,7 @@ function loadSwaggerSpec() {
     // Return a minimal valid OpenAPI object as fallback
     mcpCache.swagger = {
       openapi: '3.0.0',
-      info: { title: 'RODiT API', version: '1.0.0' },
+      info: { title: 'Time Here Now API', version: '1.0.0' },
       paths: {}
     };
     return mcpCache.swagger;
@@ -75,11 +72,17 @@ const mcpService = {
     }
     if (uri === 'config:default') {
       try {
-        const cfgPath = path.join(__dirname, '../../config/default.json');
-        const raw = fs.readFileSync(cfgPath, 'utf8');
-        return { type: 'application/json', content: JSON.parse(raw) };
+        // Use config.get() to access configuration properly
+        const configData = {
+          RATE_LIMITING: config.has('RATE_LIMITING') ? config.get('RATE_LIMITING') : null,
+          METHOD_PERMISSION_MAP: config.has('METHOD_PERMISSION_MAP') ? config.get('METHOD_PERMISSION_MAP') : null,
+          SERVERPORT: config.has('SERVERPORT') ? config.get('SERVERPORT') : null,
+          SERVICE_NAME: config.has('SERVICE_NAME') ? config.get('SERVICE_NAME') : null,
+          NODE_ENV: config.has('NODE_ENV') ? config.get('NODE_ENV') : null
+        };
+        return { type: 'application/json', content: configData };
       } catch (error) {
-        logger.error('Failed to load default config for MCP resource', {
+        logger.error('Failed to load config for MCP resource', {
           component: 'MCPRoutes',
           method: 'getResource',
           uri,
@@ -90,11 +93,35 @@ const mcpService = {
     }
     if (uri === 'readme:main') {
       try {
-        const readmePath = path.join(__dirname, '../../README.md');
-        const content = fs.readFileSync(readmePath, 'utf8');
-        return { type: 'text/markdown', content };
+        // Get README content from RODiT configuration if available
+        const roditClient = req.app?.locals?.roditClient;
+        if (!roditClient) {
+          throw new Error('RoditClient not available');
+        }
+        
+        const config_own_rodit = await roditClient.getConfigOwnRodit();
+        if (!config_own_rodit?.own_rodit?.metadata?.openapijson_url) {
+          throw new Error('RODiT configuration not available');
+        }
+        
+        // Return a summary instead of full README
+        const readmeSummary = {
+          title: 'Time Here Now API',
+          description: 'API to get the current time based on timezone or client IP using NEAR blockchain time',
+          documentation_url: config_own_rodit.own_rodit.metadata.openapijson_url,
+          purchase_url: 'https://purchase.timeherenow.com',
+          key_features: [
+            'Blockchain time from NEAR (not system/NTP time)',
+            '5 Hz polling for low-latency access',
+            'Timezone data from IANA tzdb',
+            'IP-based geolocation',
+            'Delayed webhooks with blockchain timestamps',
+            'RODiT authentication'
+          ]
+        };
+        return { type: 'application/json', content: readmeSummary };
       } catch (error) {
-        logger.error('Failed to load README.md for MCP resource', {
+        logger.error('Failed to load README for MCP resource', {
           component: 'MCPRoutes',
           method: 'getResource',
           uri,
@@ -107,7 +134,19 @@ const mcpService = {
       try {
         // Fetch health status from the health endpoint
         const axios = require('axios');
-        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+        
+        // Get base URL from RODiT configuration instead of config file
+        const roditClient = req.app?.locals?.roditClient;
+        if (!roditClient) {
+          throw new Error('RoditClient not available');
+        }
+        
+        const config_own_rodit = await roditClient.getConfigOwnRodit();
+        if (!config_own_rodit?.own_rodit?.metadata?.subjectuniqueidentifier_url) {
+          throw new Error('RODiT configuration not available');
+        }
+        
+        const baseUrl = config_own_rodit.own_rodit.metadata.subjectuniqueidentifier_url;
         const response = await axios.get(`${baseUrl}/health`, { timeout: 5000 });
         return { type: 'application/json', content: response.data };
       } catch (error) {
@@ -122,10 +161,18 @@ const mcpService = {
     }
     if (uri === 'guide:api') {
       try {
-        // Create comprehensive API guide combining README and swagger
-        const readmePath = path.join(__dirname, '../../README.md');
-        const readme = fs.readFileSync(readmePath, 'utf8');
+        // Create comprehensive API guide from configuration and swagger
         const swagger = loadSwaggerSpec();
+        const roditClient = req.app?.locals?.roditClient;
+        
+        // Get base URL from RODiT configuration
+        let baseUrl = swagger.servers?.[0]?.url;
+        if (roditClient) {
+          const config_own_rodit = await roditClient.getConfigOwnRodit();
+          if (config_own_rodit?.own_rodit?.metadata?.subjectuniqueidentifier_url) {
+            baseUrl = config_own_rodit.own_rodit.metadata.subjectuniqueidentifier_url;
+          }
+        }
         
         const guide = {
           title: 'Time Here Now API - Comprehensive Guide',
@@ -172,10 +219,9 @@ const mcpService = {
               ]
             },
             endpoints: swagger.paths,
-            schemas: swagger.components?.schemas || {},
-            readme_full: readme
+            schemas: swagger.components?.schemas || {}
           },
-          base_url: swagger.servers?.[0]?.url || 'https://timeherenow.rodit.org:8443/api',
+          base_url: baseUrl,
           external_docs: swagger.externalDocs
         };
         

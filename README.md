@@ -685,7 +685,6 @@ Rate limiting can be enabled or disabled via configuration:
 {
   "RATE_LIMITING": {
     "enabled": false,
-    "global": { "max": 240, "windowMinutes": 1 },
     "login": { "max": 20, "windowMinutes": 1 },
     "signclient": { "max": 6, "windowMinutes": 1 }
   }
@@ -693,7 +692,6 @@ Rate limiting can be enabled or disabled via configuration:
 ```
 
 - **enabled**: Set to `false` to temporarily disable all rate limiting
-- **global**: Fallback limits for authenticated endpoints (240 req/min)
 - **login**: IP-based limits for `/api/login` endpoint (20 req/min)
 - **signclient**: IP-based limits for `/api/signclient` endpoint (6 req/min)
 

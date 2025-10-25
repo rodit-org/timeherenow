@@ -1,6 +1,7 @@
 // Copyright (c) 2024 Discernible, Inc. All rights reserved.
 // NEAR RPC Timestamp Service for Time Here Now
 
+const config = require('config');
 const axios = require('axios');
 
 /**
@@ -10,9 +11,8 @@ const axios = require('axios');
 class NearTimestampService {
   constructor() {
     // NEAR mainnet RPC endpoint
-    this.rpcEndpoint = process.env.NEAR_RPC_ENDPOINT || 'https://rpc.mainnet.near.org';
-    this.timeout = parseInt(process.env.NEAR_RPC_TIMEOUT) || 5000; // 5 second timeout
-    this.fallbackToSystemTime = process.env.NEAR_FALLBACK_SYSTEM_TIME !== 'false';
+    this.rpcEndpoint = config.get('NEAR_RPC_URL');
+    this.timeout = config.get('NEAR_RPC_TIMEOUT');
     
     // Cache timestamp for a short period to avoid excessive RPC calls
     this.cache = {
@@ -61,13 +61,7 @@ class NearTimestampService {
       }
     } catch (error) {
       console.error('Error fetching NEAR timestamp:', error.message);
-      
-      if (this.fallbackToSystemTime) {
-        console.warn('Falling back to system time');
-        return Date.now();
-      } else {
-        throw new Error(`Failed to fetch NEAR timestamp: ${error.message}`);
-      }
+      throw new Error(`Failed to fetch NEAR timestamp: ${error.message}`);
     }
   }
 

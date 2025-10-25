@@ -10,22 +10,21 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("../api-docs/swagger.json");
 const { ulid } = require("ulid");
 const { RoditClient, logger } = require("@rodit/rodit-auth-be");
-const loginRoutes = require("./routes/login");
-const logoutRoutes = require("./protected/logout");
+const authRoutes = require("./routes/auth.routes");
 const { createUserRateLimitMiddleware } = require("./middleware/user-rate-limit");
 
 // Configure winston-loki logger following SDK README guidelines
 (() => {
   try {
     console.log("=== Configuring winston-loki for Time Here Now API ===");
-    const lokiUrl = process.env.LOKI_URL;
-    const logLevel = process.env.LOG_LEVEL || 'info';
-    const skipTls = String(process.env.LOKI_TLS_SKIP_VERIFY || "").toLowerCase() === "true";
-    const basicAuth = process.env.LOKI_BASIC_AUTH;
+    const lokiUrl = config.has('LOKI_URL') ? config.get('LOKI_URL') : null;
+    const logLevel = config.get('LOG_LEVEL');
+    const skipTls = config.has('LOKI_TLS_SKIP_VERIFY') ? String(config.get('LOKI_TLS_SKIP_VERIFY')).toLowerCase() === "true" : false;
+    const basicAuth = config.has('LOKI_BASIC_AUTH') ? config.get('LOKI_BASIC_AUTH') : null;
 
-    console.log("Environment variables:");
+    console.log("Configuration values:");
     console.log("  LOKI_URL:", lokiUrl || "NOT SET");
-    console.log("  LOKI_TLS_SKIP_VERIFY:", process.env.LOKI_TLS_SKIP_VERIFY || "NOT SET");
+    console.log("  LOKI_TLS_SKIP_VERIFY:", skipTls ? "true" : "false");
     console.log("  LOKI_BASIC_AUTH:", basicAuth ? "SET" : "NOT SET");
     console.log("  LOG_LEVEL:", logLevel);
 
@@ -35,7 +34,7 @@ const { createUserRateLimitMiddleware } = require("./middleware/user-rate-limit"
 
     if (lokiUrl) {
       console.log("Creating winston-loki transport...");
-      const serviceLabel = process.env.SERVICE_NAME || "timeherenow-api";
+      const serviceLabel = config.get('SERVICE_NAME');
       const lokiOptions = {
         host: lokiUrl,
         labels: { app: serviceLabel, service_name: serviceLabel, component: "rodit-sdk" },
@@ -99,15 +98,14 @@ const { createUserRateLimitMiddleware } = require("./middleware/user-rate-limit"
 })();
 
 // Configuration constants
-const SERVERPORT = config.get('SERVERPORT', process.env.PORT || 8080);
-const isProduction = process.env.NODE_ENV === "production";
-const SERVICE_NAME = process.env.SERVICE_NAME || "Time Here Now API";
+const SERVERPORT = config.get('SERVERPORT');
+const isProduction = config.get('NODE_ENV') === "production";
+const SERVICE_NAME = config.get('SERVICE_NAME');
 
 const RATE_LIMIT_SETTINGS = config.has('RATE_LIMITING') 
   ? config.get('RATE_LIMITING')
   : {
       enabled: true, // Default to enabled if not configured
-      global: { max: 240, windowMinutes: 1 },
       login: { max: 20, windowMinutes: 1 },
       signclient: { max: 6, windowMinutes: 1 }
     };
@@ -115,7 +113,7 @@ const RATE_LIMIT_SETTINGS = config.has('RATE_LIMITING')
 // Express app setup
 const app = express();
 app.disable("x-powered-by");
-const TimeZoneService = require('./lib/timezone-service');
+const TimeZoneService = require('./services/timezone.service');
 // Dedicated service instance for health reporting (NEAR status)
 const tzHealthService = new TimeZoneService();
 
@@ -138,7 +136,7 @@ function applyRateLimitersIfAvailable() {
   }
 
   const sdkFactory = app.locals?.roditClient?.getRateLimitMiddleware?.();
-  const { global, login, signclient } = RATE_LIMIT_SETTINGS;
+  const { login, signclient } = RATE_LIMIT_SETTINGS;
 
   if (typeof sdkFactory !== "function") {
     logger.warn("Rate limiting middleware not available from SDK - skipping rate limiter setup");
@@ -242,15 +240,15 @@ function setupRoutes() {
     }
   });
 
-  // Public login route (unprotected)
-  app.use("/api", loginRoutes);
-
+  // Authentication routes (login, logout, signclient)
+  app.use("/api", authRoutes);
+  
   // Public signclient route (unprotected) with its own CORS in router
-  const signclientRoutes = require("./routes/signclient");
+  const signclientRoutes = require("./routes/signclient.routes");
   app.use("/api", signclientRoutes);
 
   // MCP (Model Context Protocol) routes - handles its own authentication per endpoint
-  const mcpRoutes = require("./routes/mcproutes");
+  const mcpRoutes = require("./routes/mcp.routes");
   app.use("/api/mcp", mcpRoutes);
 
   // Protect subsequent /api routes with authentication (authorization optional for now)
@@ -264,15 +262,11 @@ function setupRoutes() {
 
   // Apply user-based rate limiting for authenticated routes
   if (RATE_LIMIT_SETTINGS.enabled && app.locals.roditClient) {
-    const userRateLimiter = createUserRateLimitMiddleware(
-      app.locals.roditClient,
-      { max: RATE_LIMIT_SETTINGS.global.max, windowMinutes: RATE_LIMIT_SETTINGS.global.windowMinutes }
-    );
+    const userRateLimiter = createUserRateLimitMiddleware(app.locals.roditClient);
     app.use("/api", userRateLimiter);
     
     logger.info("User-based rate limiting applied for authenticated endpoints", {
-      component: "TimeHereNowAPI",
-      fallbackLimits: RATE_LIMIT_SETTINGS.global
+      component: "TimeHereNowAPI"
     });
   } else if (!RATE_LIMIT_SETTINGS.enabled) {
     logger.warn("User-based rate limiting DISABLED via config (RATE_LIMITING.enabled = false)", {
@@ -281,21 +275,19 @@ function setupRoutes() {
     });
   }
 
-  // Time Here Now API routes (protected)
-  const timezoneRoutes = require("./protected/timezone");
+  // Feature-based routes (all protected after authentication middleware)
+  const timezoneRoutes = require("./routes/timezone.routes");
   app.use("/api", timezoneRoutes);
-  // Logout route (already requires auth in its own router; also after global auth)
-  const protectedLogoutRoutes = require("./protected/logout");
-  app.use("/api", protectedLogoutRoutes);
-  const timersRoutes = require("./protected/timers");
-  app.use("/api", timersRoutes);
+  
+  const timerRoutes = require("./routes/timer.routes");
+  app.use("/api", timerRoutes);
   
   // Metrics routes (protected)
-  const metricsRoutes = require("./protected/metricsroutes");
+  const metricsRoutes = require("./routes/metrics.routes");
   app.use("/api/metrics", metricsRoutes);
   
   // Session management routes (protected)
-  const sessionRoutes = require("./protected/sessionroutes");
+  const sessionRoutes = require("./routes/session.routes");
   app.use("/api/sessions", sessionRoutes);
 
   // Error handling middleware for routes
@@ -411,8 +403,8 @@ async function startServer() {
 
     // Initialize timer persistence (restore timers and start auto-save)
     try {
-      const timersModule = require("./protected/timers");
-      await timersModule.initializeTimerPersistence(app);
+      const timerModule = require("./routes/timer.routes");
+      await timerModule.initializeTimerPersistence(app);
       logger.info("Timer persistence initialized", {
         component: 'TimeHereNowAPI'
       });
@@ -432,7 +424,7 @@ async function startServer() {
     server = app.listen(SERVERPORT, () => {
       const serverInfo = {
         port: SERVERPORT,
-        env: process.env.NODE_ENV || "development",
+        env: config.get('NODE_ENV'),
         service: SERVICE_NAME,
         endpoints: [
           { method: 'POST', path: '/api/login', description: 'Authentication' },
@@ -478,7 +470,7 @@ async function startServer() {
       }
 
       // For development, show endpoints
-      if (process.env.NODE_ENV !== 'production') {
+      if (config.get('NODE_ENV') !== 'production') {
         console.log(`\n🌍 Time Here Now API running on port ${SERVERPORT}`);
         console.log('📚 Available endpoints:');
         serverInfo.endpoints.forEach(endpoint => {
