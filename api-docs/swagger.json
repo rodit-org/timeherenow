@@ -331,9 +331,8 @@
     "/mcp/resources": {
       "get": {
         "summary": "List available MCP resources",
-        "description": "Returns a list of resources available through the Model Context Protocol interface",
+        "description": "Returns a list of resources available through the Model Context Protocol interface (Public for AI discovery)",
         "tags": ["MCP"],
-        "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
             "in": "query",
@@ -382,9 +381,8 @@
     "/mcp/resource/{uri}": {
       "get": {
         "summary": "Get a specific MCP resource",
-        "description": "Returns the content of a specific resource",
+        "description": "Returns the content of a specific resource (Public for AI discovery)",
         "tags": ["MCP"],
-        "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
             "in": "path",
@@ -419,9 +417,8 @@
     "/mcp/schema": {
       "get": {
         "summary": "Get MCP schema",
-        "description": "Returns the OpenAPI schema for the MCP interface",
+        "description": "Returns the OpenAPI schema for the MCP interface (Public for AI discovery)",
         "tags": ["MCP"],
-        "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {
             "description": "MCP schema",
@@ -439,7 +436,7 @@
     "/metrics": {
       "get": {
         "summary": "Get performance metrics",
-        "description": "Returns current performance metrics including request counts and session information",
+        "description": "Returns current performance metrics including request counts and session information. Requires authentication and authorization.",
         "tags": ["Metrics"],
         "security": [{ "bearerAuth": [] }],
         "responses": {
@@ -496,7 +493,7 @@
     "/metrics/system": {
       "get": {
         "summary": "Get system metrics",
-        "description": "Returns system resource metrics including CPU, memory, and uptime",
+        "description": "Returns system resource metrics including CPU, memory, and uptime. Requires authentication and authorization.",
         "tags": ["Metrics"],
         "security": [{ "bearerAuth": [] }],
         "responses": {

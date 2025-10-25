@@ -11,9 +11,14 @@
 - `GET /health` - Health check
 - `GET /api-docs` - Interactive API documentation (Swagger UI)
 - `GET /swagger.json` - Raw OpenAPI specification (JSON)
+- `GET /api/mcp/resources` - List available MCP resources (Public for AI discovery)
+- `GET /api/mcp/resource/:uri` - Get specific MCP resource (Public for AI discovery)
+- `GET /api/mcp/schema` - Get MCP OpenAPI schema (Public for AI discovery)
 
-*Protected Endpoints (require authentication):*
+*Protected Endpoints (require authentication only):*
 - `POST /api/logout` - Logout
+
+*Protected Endpoints (require authentication and authorization):*
 - `POST /api/timers/schedule` - Schedule delayed webhook (Client RODiT destination)
 - `POST /api/timezone` - List all IANA timezones
 - `POST /api/timezone/area` - List timezones for a given area
@@ -21,18 +26,15 @@
 - `POST /api/timezones/by-country` - List timezones by ISO country code
 - `POST /api/ip` - Get current time with location obtained from the IP (IPv4 or IPv6)
 - `POST /api/sign/hash` - Sign a hash with NEAR timestamp
-- `GET /api/mcp/resources` - List available MCP resources
-- `GET /api/mcp/resource/:uri` - Get specific MCP resource
-- `GET /api/mcp/schema` - Get MCP OpenAPI schema
-- `GET /api/metrics` - Get performance metrics
+- `GET /api/metrics` - Get performance metrics (requires permission)
 - `HEAD /api/metrics` - Health probe for metrics endpoint
-- `GET /api/metrics/system` - Get system resource metrics
+- `GET /api/metrics/system` - Get system resource metrics (requires permission)
 - `HEAD /api/metrics/system` - Health probe for system metrics endpoint
 - `POST /api/metrics/reset` - Reset performance metrics (admin only)
-- `GET /api/metrics/debug` - Debug metrics system status
-- `GET /api/sessions/list_all` - List all active sessions (admin)
-- `POST /api/sessions/revoke` - Revoke a specific session (admin)
-- `POST /api/sessions/cleanup` - Clean up expired sessions
+- `GET /api/metrics/debug` - Debug metrics system status (admin only)
+- `GET /api/sessions/list_all` - List all active sessions (admin only)
+- `POST /api/sessions/revoke` - Revoke a specific session (admin only)
+- `POST /api/sessions/cleanup` - Clean up expired sessions (admin only)
 
 
 **Authentication**: Protected endpoints require `Authorization: Bearer <JWT_TOKEN>` header obtained from `/api/login`.

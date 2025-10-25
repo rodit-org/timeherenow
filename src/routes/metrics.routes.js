@@ -16,6 +16,16 @@ const authenticate_apicall = (req, res, next) => {
   }
   return client.authenticate(req, res, next);
 };
+
+// Create authorization middleware for admin-only endpoints
+const authorize = (req, res, next) => {
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authorization service unavailable' });
+  }
+  return client.authorize(req, res, next);
+};
+
 const { createLogContext, logErrorWithMetrics } = logger;
 
 // Get performance service from app.locals (must be initialized at startup)
@@ -30,9 +40,9 @@ const getPerformanceService = (req) => {
  * GET /api/metrics
  * 
  * Get current performance metrics
- * Protected: Requires authentication
+ * Protected: Requires authentication and authorization
  */
-router.get('/', authenticate_apicall, async (req, res) => {
+router.get('/', authenticate_apicall, authorize, async (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   
@@ -195,9 +205,9 @@ router.head('/', authenticate_apicall, (req, res) => {
  * GET /api/metrics/system
  * 
  * Get system resource metrics (CPU, memory, etc.)
- * Protected: Requires authentication
+ * Protected: Requires authentication and authorization
  */
-router.get('/system', authenticate_apicall, (req, res) => {
+router.get('/system', authenticate_apicall, authorize, (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   
@@ -269,7 +279,7 @@ router.get('/system', authenticate_apicall, (req, res) => {
  * Reset performance metrics counters
  * Protected: Requires authentication and admin permissions
  */
-router.post('/reset', authenticate_apicall, (req, res) => {
+router.post('/reset', authenticate_apicall, authorize, (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   
@@ -355,9 +365,9 @@ router.post('/reset', authenticate_apicall, (req, res) => {
  * GET /api/metrics/debug
  * 
  * Debug endpoint to check metrics system status
- * Protected: Requires authentication
+ * Protected: Requires authentication and admin permissions
  */
-router.get('/debug', authenticate_apicall, (req, res) => {
+router.get('/debug', authenticate_apicall, authorize, (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   

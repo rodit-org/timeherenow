@@ -5,6 +5,15 @@ const { logger } = require('@rodit/rodit-auth-be');
 const TimeZoneService = require('../services/timezone.service');
 const TimerPersistence = require('../services/timer-persistence.service');
 
+// Authentication middleware - validates JWT token
+const authenticate = (req, res, next) => {
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authentication service unavailable' });
+  }
+  return client.authenticate(req, res, next);
+};
+
 // Authorization middleware - uses app.locals.roditClient
 const authorize = (req, res, next) => {
   const client = req.app?.locals?.roditClient;
@@ -51,7 +60,7 @@ function ensureTimerStore(app) {
  * POST /timers/schedule - Schedule a webhook timer
  * Protected: Requires authentication and authorization
  */
-router.post('/timers/schedule', authorize, async (req, res) => {
+router.post('/timers/schedule', authenticate, authorize, async (req, res) => {
   const requestId = req.requestId || ulid();
   const { delay_seconds, payload = null } = req.body || {};
 

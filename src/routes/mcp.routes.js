@@ -251,26 +251,11 @@ const mcpService = {
  *     summary: List available MCP resources
  *     description: Returns a list of resources available through the MCP interface
  *     tags: [MCP]
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Maximum number of resources to return
- *       - in: query
- *         name: cursor
- *         schema:
- *           type: string
- *         description: Cursor for pagination
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of available resources with pagination info
- *       401:
- *         description: Unauthorized
+ *         description: List of available resources
  */
-router.get('/resources', authenticate_apicall, async (req, res) => {
+router.get('/resources', async (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   
@@ -343,30 +328,31 @@ router.get('/resources', authenticate_apicall, async (req, res) => {
 });
 
 /**
+ * GET /api/mcp/resource/:uri
+ * 
+ * Get a specific MCP resource by URI
+ * 
  * @swagger
  * /api/mcp/resource/{uri}:
  *   get:
  *     summary: Get a specific MCP resource
- *     description: Returns the content of a specific resource
- *     tags: [MCP]
+ *     description: Retrieves the content of a specific resource by its URI (Public for AI discovery)
+ *     tags:
+ *       - MCP
  *     parameters:
  *       - in: path
  *         name: uri
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: URI of the resource to retrieve
- *     security:
- *       - bearerAuth: []
+ *         description: The URI of the resource to retrieve
  *     responses:
  *       200:
  *         description: Resource content
- *       401:
- *         description: Unauthorized
  *       404:
  *         description: Resource not found
  */
-router.get('/resource/:uri(*)', authenticate_apicall, async (req, res) => {
+router.get('/resource/:uri(*)', async (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   const uri = req.params.uri;
@@ -483,17 +469,22 @@ router.get('/resource/:uri(*)', authenticate_apicall, async (req, res) => {
 });
 
 /**
+ * GET /api/mcp/schema
+ * 
+ * Get the MCP OpenAPI schema
+ * 
  * @swagger
  * /api/mcp/schema:
  *   get:
- *     summary: Get MCP schema
- *     description: Returns the schema for the MCP interface
- *     tags: [MCP]
+ *     summary: Get MCP OpenAPI schema
+ *     description: Returns the OpenAPI schema for the MCP interface (Public for AI discovery)
+ *     tags:
+ *       - MCP
  *     responses:
  *       200:
  *         description: MCP schema
  */
-router.get('/schema', authenticate_apicall, async (req, res) => {
+router.get('/schema', async (req, res) => {
   const requestId = req.requestId || ulid();
   const startTime = Date.now();
   

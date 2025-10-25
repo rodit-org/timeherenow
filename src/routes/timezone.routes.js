@@ -9,6 +9,15 @@ const nacl = require('tweetnacl');
 const TimeZoneService = require('../services/timezone.service');
 const { logger } = require('@rodit/rodit-auth-be');
 
+// Authentication middleware - validates JWT token
+const authenticate = (req, res, next) => {
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authentication service unavailable' });
+  }
+  return client.authenticate(req, res, next);
+};
+
 // Authorization middleware - uses app.locals.roditClient
 const authorize = (req, res, next) => {
   const client = req.app?.locals?.roditClient;
@@ -61,7 +70,7 @@ function handleError(res, error, format = 'json') {
    * POST /timezone - List all timezones (JSON)
    * Protected: Requires authentication and authorization
    */
-  router.post('/timezone', authorize, async (req, res) => {
+  router.post('/timezone', authenticate, authorize, async (req, res) => {
     try {
       const timezones = await timezoneService.getAllTimezones();
       res.json(timezones);
@@ -77,7 +86,7 @@ function handleError(res, error, format = 'json') {
    * Body: { area: string }
    * Protected: Requires authentication and authorization
    */
-  router.post('/timezone/area', authorize, async (req, res) => {
+  router.post('/timezone/area', authenticate, authorize, async (req, res) => {
   try {
     const { area } = req.body || {};
     const timezones = await timezoneService.getTimezonesByArea(area);
@@ -100,7 +109,7 @@ function handleError(res, error, format = 'json') {
  * Legacy Body (supported as fallback): { area: string, location: string, region?: string, locale?: string }
  * Protected: Requires authentication and authorization
  */
-router.post('/timezone/time', authorize, async (req, res) => {
+router.post('/timezone/time', authenticate, authorize, async (req, res) => {
   try {
     const { timezone: tzFromBody, area, location, region } = req.body || {};
     const clientIP = getClientIP(req);
@@ -127,7 +136,7 @@ router.post('/timezone/time', authorize, async (req, res) => {
    * Body: { country_code: string }
    * Protected: Requires authentication and authorization
    */
-  router.post('/timezones/by-country', authorize, async (req, res) => {
+  router.post('/timezones/by-country', authenticate, authorize, async (req, res) => {
     try {
       const { country_code } = req.body || {};
       const list = await timezoneService.getTimezonesByCountryCode(country_code);
@@ -148,7 +157,7 @@ router.post('/timezone/time', authorize, async (req, res) => {
  * Body: { ip?: string }
  * Protected: Requires authentication and authorization
  */
-  router.post('/ip', authorize, async (req, res) => {
+  router.post('/ip', authenticate, authorize, async (req, res) => {
   try {
     const { ip } = req.body || {};
     if (ip && net.isIP(String(ip).trim()) === 0) {
@@ -174,7 +183,7 @@ router.post('/timezone/time', authorize, async (req, res) => {
  * Body: { hash_b64url: string }
  * Protected: Requires authentication and authorization
  */
-router.post('/sign/hash', authorize, async (req, res) => {
+router.post('/sign/hash', authenticate, authorize, async (req, res) => {
   try {
     const { hash_b64url } = req.body || {};
     if (!hash_b64url || typeof hash_b64url !== 'string') {
