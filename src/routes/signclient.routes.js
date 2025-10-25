@@ -435,6 +435,15 @@ router.post("/signclient", async (req, res) => {
     const rootCause = error.cause ? error.cause.message : error.message;
     const errorType = error.name || error.constructor.name;
     
+    // Determine if this is a validation error (client error) or server error
+    const isValidationError = error.statusCode === 400 || 
+                              error.message?.includes('validation') ||
+                              error.message?.includes('Invalid') ||
+                              error.message?.includes('Missing') ||
+                              error.message?.includes('permission');
+    
+    const statusCode = isValidationError ? 400 : 500;
+    
     // Enhanced error logging with clear cause and effect
     logErrorWithMetrics(
       `Error in signclient endpoint: ${errorType}`,
@@ -445,7 +454,9 @@ router.post("/signclient", async (req, res) => {
         rootCause,
         reason: error.reason || "Request processing failed",
         impact: "Client request cannot be completed",
-        duration
+        duration,
+        statusCode,
+        isValidationError
       },
       error,
       "signclient_error",
@@ -456,9 +467,9 @@ router.post("/signclient", async (req, res) => {
       }
     );
 
-    // Return a structured error response
-    res.status(500).json({
-      error: "Failed to sign client request",
+    // Return a structured error response with appropriate status code
+    res.status(statusCode).json({
+      error: isValidationError ? "Invalid request" : "Failed to sign client request",
       reason: errorType,
       details: error.message,
       impact: "Unable to complete the requested operation",

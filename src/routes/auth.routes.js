@@ -5,6 +5,15 @@ const { ulid } = require("ulid");
 // Import logger utilities from SDK
 const { logger } = require('@rodit/rodit-auth-be');
 
+// Authorization middleware - uses app.locals.roditClient
+const authorize = (req, res, next) => {
+  const client = req.app?.locals?.roditClient;
+  if (!client) {
+    return res.status(503).json({ error: 'Authorization service unavailable' });
+  }
+  return client.authorize(req, res, next);
+};
+
 /**
  * @swagger
  * /api/login:
@@ -72,7 +81,7 @@ router.post('/login', async (req, res) => {
  * Logout endpoint - terminates the current session
  * Protected: Requires authentication
  */
-router.post('/logout', async (req, res) => {
+router.post('/logout', authorize, async (req, res) => {
   req.logAction = "logout-attempt";
   logger.info("Logout request received", {
     component: "AuthRoutes",
