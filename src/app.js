@@ -340,11 +340,11 @@ async function startServer() {
       const authClient = await RoditClient.create('server');
       app.locals.roditClient = authClient;
       
-      // Apply SDK logging middleware
+      // Apply SDK logging middleware BEFORE routes
       const loggingMiddleware = authClient.getLoggingMiddleware();
       app.use(loggingMiddleware);
       
-      // Apply performance tracking middleware to track request counts
+      // Apply performance tracking middleware to track request counts BEFORE routes
       const performanceService = authClient.getPerformanceService();
       if (performanceService && typeof performanceService.middleware === 'function') {
         app.use(performanceService.middleware());
@@ -379,18 +379,20 @@ async function startServer() {
         service: SERVICE_NAME
       });
       applyRateLimitersIfAvailable();
+      
+      // Setup routes AFTER middleware is applied
+      setupRoutes();
     } catch (authErr) {
       logger.warn("Failed to initialize authentication client", { 
         component: 'TimeHereNowAPI',
         error: authErr.message 
       });
+      // Setup routes even if auth client fails
+      setupRoutes();
     }
 
     // Ensure rate limiters are applied even if SDK init failed
     applyRateLimitersIfAvailable();
-
-    // Setup routes
-    setupRoutes();
 
     // Initialize timer persistence (restore timers and start auto-save)
     try {
