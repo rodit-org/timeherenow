@@ -49,7 +49,7 @@ router.post('/login', (req, res) => {
     method: "createSession",
     requestId,
     method: req.method,
-    path: req.path,
+    path: req.originalUrl,
     ip: req.ip,
     userAgent: req.get('User-Agent')
   });
@@ -78,7 +78,7 @@ router.post('/logout', authenticate_apicall, (req, res) => {
     method: "terminateSession",
     requestId,
     method: req.method,
-    path: req.path,
+    path: req.originalUrl,
     ip: req.ip,
     userId: req.user ? req.user.id : "unknown",
     userAgent: req.get('User-Agent')
@@ -202,7 +202,7 @@ router.post('/cleanup', authenticate_apicall, async (req, res) => {
     method: 'cleanupSessions',
     requestId,
     httpMethod: req.method,
-    path: req.path,
+    path: req.originalUrl,
     ip: req.ip,
     userId: req.user?.id || 'system'
   };

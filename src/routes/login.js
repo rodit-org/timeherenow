@@ -42,7 +42,7 @@ router.post('/login', async (req, res) => {
     component: "API",
     method: "login",
     requestId: req.requestId || ulid(),
-    path: req.path,
+    path: req.originalUrl,
     ip: req.ip,
     userAgent: req.get('User-Agent')
   });

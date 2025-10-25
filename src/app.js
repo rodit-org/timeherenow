@@ -178,7 +178,7 @@ app.use((req, res, next) => {
     logger.debugWithContext('Request completed', {
       component: 'API',
       method: req.method,
-      path: req.path,
+      path: req.originalUrl,
       statusCode: res.statusCode,
       duration,
       requestId: req.requestId,
@@ -186,7 +186,7 @@ app.use((req, res, next) => {
     });
     logger.metric('request_duration_ms', duration, {
       method: req.method,
-      path: req.path,
+      path: req.originalUrl,
       status: res.statusCode
     });
   });

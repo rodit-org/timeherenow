@@ -35,7 +35,7 @@ function createUserRateLimitMiddleware(roditClient, fallbackLimits = { max: 240,
       logger.debugWithContext('Using fallback IP-based rate limiting (unauthenticated)', {
         component: 'UserRateLimit',
         ip: req.ip,
-        path: req.path
+        path: req.originalUrl
       });
       return fallbackLimiter(req, res, next);
     }
@@ -99,7 +99,7 @@ function createUserRateLimitMiddleware(roditClient, fallbackLimits = { max: 240,
         maxRequests: userLimiterData.maxRequests,
         windowMinutes: userLimiterData.windowMinutes,
         isFallback: userLimiterData.isFallback || false,
-        path: req.path
+        path: req.originalUrl
       });
 
       // Apply the user's rate limiter
@@ -110,7 +110,7 @@ function createUserRateLimitMiddleware(roditClient, fallbackLimits = { max: 240,
         component: 'UserRateLimit',
         userId,
         error: error.message,
-        path: req.path
+        path: req.originalUrl
       }, error);
       
       // On error, fall back to IP-based rate limiting
