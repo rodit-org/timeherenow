@@ -125,14 +125,6 @@ function applyRateLimitersIfAvailable() {
     return;
   }
 
-  // TEMPORARILY DISABLED FOR TESTING
-  logger.info("Rate limiting temporarily disabled", {
-    component: "TimeHereNowAPI"
-  });
-  rateLimitersApplied = true;
-  return;
-
-  /* DISABLED
   const sdkFactory = app.locals?.roditClient?.getRateLimitMiddleware?.();
   const { global, login, signclient } = RATE_LIMIT_SETTINGS;
 
@@ -152,7 +144,6 @@ function applyRateLimitersIfAvailable() {
     login,
     signclient
   });
-  */
 }
 
 // Configure Express to trust proxies for correct client IP detection
@@ -259,8 +250,7 @@ function setupRoutes() {
     });
   }
 
-  // TEMPORARILY DISABLED FOR TESTING
-  /* DISABLED - Apply user-based rate limiting for authenticated routes
+  // Apply user-based rate limiting for authenticated routes
   if (app.locals.roditClient) {
     const userRateLimiter = createUserRateLimitMiddleware(
       app.locals.roditClient,
@@ -273,7 +263,6 @@ function setupRoutes() {
       fallbackLimits: RATE_LIMIT_SETTINGS.global
     });
   }
-  */
 
   // Time Here Now API routes (protected)
   const timezoneRoutes = require("./protected/timezone");
