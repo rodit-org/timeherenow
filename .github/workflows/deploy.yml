@@ -141,6 +141,8 @@ jobs:
               --name timeherenow-container \
               --user 1000:1000 \
               --restart=unless-stopped \
+              -e NODE_ENV='${{ vars.NODE_ENV }}' \
+              -e LOG_LEVEL='${{ vars.LOG_LEVEL }}' \
               -e LOKI_URL='${{ vars.LOKI_URL }}' \
               -e LOKI_TLS_SKIP_VERIFY='${{ vars.LOKI_TLS_SKIP_VERIFY }}' \
               -e LOKI_BASIC_AUTH='${{ secrets.LOKI_BASIC_AUTH }}' \
