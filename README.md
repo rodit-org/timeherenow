@@ -619,9 +619,31 @@ Complete OpenAPI 3.0.1 specification available at: `api-docs/swagger.json`
 
 ### Configuration Files
 
-#### config/default.json - Permission Configuration
+#### config/default.json - Configuration
 
-**Automated Generation from Swagger**
+**Rate Limiting**
+
+Rate limiting can be enabled or disabled via configuration:
+
+```json
+{
+  "RATE_LIMITING": {
+    "enabled": false,
+    "global": { "max": 240, "windowMinutes": 1 },
+    "login": { "max": 20, "windowMinutes": 1 },
+    "signclient": { "max": 6, "windowMinutes": 1 }
+  }
+}
+```
+
+- **enabled**: Set to `false` to temporarily disable all rate limiting
+- **global**: Fallback limits for authenticated endpoints (240 req/min)
+- **login**: IP-based limits for `/api/login` endpoint (20 req/min)
+- **signclient**: IP-based limits for `/api/signclient` endpoint (6 req/min)
+
+User-specific rate limits are read from RODiT token metadata (`max_requests`, `maxrq_window`).
+
+**Automated Permission Map Generation**
 
 The `METHOD_PERMISSION_MAP` is automatically generated from `api-docs/swagger.json` during deployment. This ensures the permission configuration stays in sync with the API specification.
 

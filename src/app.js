@@ -103,11 +103,14 @@ const SERVERPORT = config.get('SERVERPORT', process.env.PORT || 8080);
 const isProduction = process.env.NODE_ENV === "production";
 const SERVICE_NAME = process.env.SERVICE_NAME || "Time Here Now API";
 
-const RATE_LIMIT_SETTINGS = {
-  global: { max: 240, windowMinutes: 1 },
-  login: { max: 20, windowMinutes: 1 },
-  signclient: { max: 6, windowMinutes: 1 }
-};
+const RATE_LIMIT_SETTINGS = config.has('RATE_LIMITING') 
+  ? config.get('RATE_LIMITING')
+  : {
+      enabled: true, // Default to enabled if not configured
+      global: { max: 240, windowMinutes: 1 },
+      login: { max: 20, windowMinutes: 1 },
+      signclient: { max: 6, windowMinutes: 1 }
+    };
 
 // Express app setup
 const app = express();
@@ -122,6 +125,15 @@ let rateLimitersApplied = false;
 
 function applyRateLimitersIfAvailable() {
   if (rateLimitersApplied) {
+    return;
+  }
+
+  if (!RATE_LIMIT_SETTINGS.enabled) {
+    logger.warn("Rate limiting is DISABLED via config (RATE_LIMITING.enabled = false)", {
+      component: "TimeHereNowAPI",
+      config: "config/default.json"
+    });
+    rateLimitersApplied = true; // Mark as applied to prevent retry
     return;
   }
 
@@ -251,7 +263,7 @@ function setupRoutes() {
   }
 
   // Apply user-based rate limiting for authenticated routes
-  if (app.locals.roditClient) {
+  if (RATE_LIMIT_SETTINGS.enabled && app.locals.roditClient) {
     const userRateLimiter = createUserRateLimitMiddleware(
       app.locals.roditClient,
       { max: RATE_LIMIT_SETTINGS.global.max, windowMinutes: RATE_LIMIT_SETTINGS.global.windowMinutes }
@@ -261,6 +273,11 @@ function setupRoutes() {
     logger.info("User-based rate limiting applied for authenticated endpoints", {
       component: "TimeHereNowAPI",
       fallbackLimits: RATE_LIMIT_SETTINGS.global
+    });
+  } else if (!RATE_LIMIT_SETTINGS.enabled) {
+    logger.warn("User-based rate limiting DISABLED via config (RATE_LIMITING.enabled = false)", {
+      component: "TimeHereNowAPI",
+      config: "config/default.json"
     });
   }
 

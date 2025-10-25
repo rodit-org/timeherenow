@@ -1,4 +1,19 @@
 {
+  "RATE_LIMITING": {
+    "enabled": false,
+    "global": {
+      "max": 240,
+      "windowMinutes": 1
+    },
+    "login": {
+      "max": 20,
+      "windowMinutes": 1
+    },
+    "signclient": {
+      "max": 6,
+      "windowMinutes": 1
+    }
+  },
   "METHOD_PERMISSION_MAP": {
     "logout": [
       "entityAndProperties",
