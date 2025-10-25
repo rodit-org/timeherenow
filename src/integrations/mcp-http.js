@@ -5,10 +5,13 @@
  * backed by the existing mcpService implementation.
  */
 
+const config = require('config');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
 const { logger } = require('@rodit/rodit-auth-be');
+
+const API_VERSION = config.get('API_VERSION');
 
 // Import the local MCP service implementation
 // This is application-specific and not part of the rodit-auth-be package
@@ -21,7 +24,7 @@ const mcpService = require('../routes/mcp.routes').mcpService;
 async function setupMcpHttpTransport(app) {
   const mcpServer = new McpServer({
     name: 'timeherenow.com MCP',
-    version: '1.0.0',
+    version: API_VERSION,
     instructions: 'Use these tools via MCP streamable HTTP transport.'
   });
 

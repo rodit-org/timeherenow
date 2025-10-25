@@ -1,6 +1,9 @@
 const fs = require('fs').promises;
 const path = require('path');
+const config = require('config');
 const { logger } = require('@rodit/rodit-auth-be');
+
+const API_VERSION = config.get('API_VERSION');
 
 /**
  * Timer Persistence Manager
@@ -59,7 +62,7 @@ class TimerPersistence {
     try {
       const serialized = this.serializeTimers(timerStore);
       const data = JSON.stringify({
-        version: 1,
+        version: API_VERSION,
         saved_at: new Date().toISOString(),
         timer_count: serialized.length,
         timers: serialized

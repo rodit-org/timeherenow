@@ -11,6 +11,8 @@ const router = express.Router();
 const { ulid } = require('ulid');
 const { logger } = require('@rodit/rodit-auth-be');
 
+const API_VERSION = config.get('API_VERSION');
+
 // Authentication middleware - uses app.locals.roditClient
 const authenticate_apicall = (req, res, next) => {
   const client = req.app?.locals?.roditClient;
@@ -43,7 +45,7 @@ function loadSwaggerSpec() {
     // Return a minimal valid OpenAPI object as fallback
     mcpCache.swagger = {
       openapi: '3.0.0',
-      info: { title: 'Time Here Now API', version: '1.0.0' },
+      info: { title: 'Time Here Now API', version: API_VERSION },
       paths: {}
     };
     return mcpCache.swagger;
@@ -176,7 +178,7 @@ const mcpService = {
         
         const guide = {
           title: 'Time Here Now API - Comprehensive Guide',
-          version: swagger.info?.version || '1.0.0',
+          version: swagger.info?.version || API_VERSION,
           description: 'Complete API documentation combining README context with OpenAPI specifications',
           sections: {
             overview: {
