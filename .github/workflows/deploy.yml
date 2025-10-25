@@ -11,6 +11,11 @@ on:
         description: 'Commit SHA to deploy'
         required: true
         default: ''
+      update_tzdata:
+        description: 'Update IANA Time Zone Database (@vvo/tzdb) to latest version'
+        required: false
+        type: boolean
+        default: false
 
 env:
   SSH_HOST: 178.62.195.21
@@ -42,6 +47,25 @@ jobs:
           else
             npm install
           fi
+
+      - name: Update IANA Time Zone Database
+        if: ${{ github.event.inputs.update_tzdata == 'true' }}
+        run: |
+          echo "Updating IANA Time Zone Database (@vvo/tzdb) to latest version..."
+          bash scripts/update-tzdata.sh
+          
+          echo "✓ Time zone database update complete"
+          echo "⚠️  Remember to commit package.json and package-lock.json if this is a manual update"
+
+      - name: Generate METHOD_PERMISSION_MAP from swagger.json
+        run: |
+          echo "Generating METHOD_PERMISSION_MAP from swagger.json..."
+          node scripts/generate-permission-map.js
+          
+          echo "Validating generated permission map..."
+          node scripts/generate-permission-map.js --validate || echo "⚠️ Validation warnings detected (non-blocking)"
+          
+          echo "✓ Permission map generation complete"
 
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2

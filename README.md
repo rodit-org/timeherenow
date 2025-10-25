@@ -620,25 +620,63 @@ Complete OpenAPI 3.0.1 specification available at: `api-docs/swagger.json`
 ### Configuration Files
 
 #### config/default.json - Permission Configuration
-The `METHOD_PERMISSION_MAP` defines which API methods require specific permissions:
+
+**Automated Generation from Swagger**
+
+The `METHOD_PERMISSION_MAP` is automatically generated from `api-docs/swagger.json` during deployment. This ensures the permission configuration stays in sync with the API specification.
+
+```bash
+# Generate permission map from swagger.json
+node scripts/generate-permission-map.js
+
+# Validate without updating
+node scripts/generate-permission-map.js --validate
+```
+
+The map defines which permission scopes are allowed for each API operation:
 
 ```json
 {
   "METHOD_PERMISSION_MAP": {
-    "timezone": ["entityAndProperties", "entityOnly"],
-    "timezone.txt": ["entityAndProperties", "entityOnly"],
-    "ip": ["entityAndProperties", "entityOnly"],
-    "ip.txt": ["entityAndProperties", "entityOnly"],
-    "logout": ["entityAndProperties"]
+    "logout": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "timezone": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "area": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "time": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "by-country": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "ip": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "hash": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "schedule": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "resources": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "metrics": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "system": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "list_all": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "revoke": ["entityAndProperties", "propertiesOnly", "entityOnly"],
+    "cleanup": ["entityAndProperties", "propertiesOnly", "entityOnly"]
   }
 }
 ```
 
-- **timezone**/**timezone.txt**: List timezones and access area-specific listings
-- **ip**/**ip.txt**: Get current time based on client/specified IP
-- **logout**: Session termination
+**Permission Scopes:**
+- `entityAndProperties` - Full access (token prefix: `+`)
+- `propertiesOnly` - Properties only (token prefix: `-`)
+- `entityOnly` - Entity only (no prefix)
 
-These permissions are validated against the RODIT token's `permissioned_routes` field during API calls.
+These permissions are validated against the RODiT token's `permissioned_routes` field during API calls.
+
+**Customizing Scopes:** To restrict specific operations, add `x-permission-scopes` to the operation in `swagger.json`:
+
+```json
+{
+  "/admin/endpoint": {
+    "post": {
+      "x-permission-scopes": ["entityAndProperties"],
+      "security": [{ "bearerAuth": [] }]
+    }
+  }
+}
+```
+
+See [scripts/README-generate-permission-map.md](scripts/README-generate-permission-map.md) for details.
 
 ### Docker Configuration
 
@@ -676,16 +714,22 @@ The nginx reverse proxy provides:
 ### GitHub Actions Deployment (.github/workflows/deploy.yml)
 
 **Trigger Events**:
-- Push to `20250705mcp` branch
-- Pull requests to `20250705mcp` branch
-- Manual workflow dispatch with commit SHA selection
+- Push to `main` branch
+- Pull requests to `main` branch
+- Manual workflow dispatch with options:
+  - Commit SHA selection
+  - Optional IANA Time Zone Database update
 
 **Deployment Process**:
 
 1. **Setup Phase**:
    - Checkout specified commit
-   - Setup Node.js 18 with npm cache
+   - Setup Node.js 20 with npm cache
    - Install dependencies
+
+2. **Pre-Deployment Updates** (automated):
+   - **Time Zone Database Update** (optional): Updates `@vvo/tzdb` to latest IANA tzdb version
+   - **Permission Map Generation**: Automatically generates `METHOD_PERMISSION_MAP` from `swagger.json`
 
 2. **File Transfer**:
    - SSH key installation for secure access
@@ -711,8 +755,141 @@ The nginx reverse proxy provides:
 
 **Volume Mounts**:
 - `/app/logs`: Application logs
-- `/app/data`: Persistent application data
+- `/app/data`: Persistent application data (includes timer persistence)
 - `/app/certs`: SSL certificates (read-only)
+
+## 7. Timer Persistence
+
+The API supports scheduling delayed webhooks with a maximum delay of **48 hours (172800 seconds)**. Timers survive server restarts through automatic persistence.
+
+### How It Works
+
+**Automatic Hourly Saves**:
+- Active timers are saved to `data/timers.json` every hour
+- Saves are atomic (temp file + rename) to prevent corruption
+- Maximum data loss window: 1 hour between saves
+
+**Restoration on Startup**:
+1. Loads saved timers from disk
+2. Calculates remaining time for each timer
+3. **Skips expired timers** (never fires late webhooks)
+4. Reschedules active timers with adjusted delays
+
+**Graceful Shutdown**:
+- On `SIGTERM` or `SIGINT`, performs final save before exit
+- Deployments trigger immediate saves (no data loss)
+
+### Design Decisions
+
+**Why Never Fire Late?**
+- Webhooks should fire at scheduled time, not arbitrarily later
+- Predictability: timers either fire on time or not at all
+- Prevents duplicate/late webhooks from confusing downstream systems
+
+**Why 48 Hours?**
+- Persistence reduces risk of longer timers
+- Flexibility for next-day scheduling
+- Balances resource usage with practical use cases
+
+### File Format
+
+```json
+{
+  "version": 1,
+  "saved_at": "2025-10-24T14:35:00.000Z",
+  "timer_count": 3,
+  "timers": [
+    {
+      "timer_id": "01JBEXAMPLE123",
+      "session_key": "user-session-key",
+      "user_id": "user123",
+      "scheduled_at": "2025-10-24T14:00:00.000Z",
+      "execute_at": "2025-10-24T16:00:00.000Z",
+      "delay_seconds": 7200,
+      "payload": { "custom": "data" }
+    }
+  ]
+}
+```
+
+### Operational Notes
+
+**Kubernetes/Docker**:
+- Mount persistent volume at `/app/data` to preserve timers
+- Use `terminationGracePeriodSeconds: 30` for graceful shutdown
+- Current implementation: single instance with session affinity
+
+**Monitoring**:
+- Logs show save/restore events and skipped timers
+- Timer callbacks include `restored: true` flag in metrics
+
+## 8. Automated Permission Map Generation
+
+The `METHOD_PERMISSION_MAP` is automatically generated from `api-docs/swagger.json` during deployment, ensuring permissions stay synchronized with the API specification.
+
+### How It Works
+
+**Operation Name Extraction**:
+- Script extracts operation names from API paths (last path segment)
+- `/timezone/area` → `area`, `/sessions/list_all` → `list_all`
+
+**Authentication Detection**:
+- Only endpoints with `security: [{ "bearerAuth": [] }]` are included
+- Public endpoints (`/login`, `/signclient`, `/health`) are automatically excluded
+
+**Default Permission Scopes**:
+All operations allow three permission scopes by default:
+- `entityAndProperties` - Full access (token prefix: `+`)
+- `propertiesOnly` - Properties only (token prefix: `-`)
+- `entityOnly` - Entity only (no prefix)
+
+### Usage
+
+```bash
+# Generate and update config/default.json
+node scripts/generate-permission-map.js
+
+# Validate without updating
+node scripts/generate-permission-map.js --validate
+```
+
+### Customizing Permissions
+
+Add `x-permission-scopes` to operations in `swagger.json`:
+
+```json
+{
+  "paths": {
+    "/admin/endpoint": {
+      "post": {
+        "x-permission-scopes": ["entityAndProperties"],
+        "security": [{ "bearerAuth": [] }]
+      }
+    }
+  }
+}
+```
+
+### Workflow
+
+**Adding New Endpoint**:
+1. Add to `swagger.json` with `security` field
+2. Deploy (script runs automatically)
+3. Permission map updates automatically
+
+**Removing Endpoint**:
+1. Remove from `swagger.json`
+2. Deploy
+3. Operation removed from permission map
+
+### Benefits
+
+✅ Single source of truth (swagger.json)  
+✅ Automatic synchronization on every deployment  
+✅ No manual permission config maintenance  
+✅ Validation detects inconsistencies  
+
+See [scripts/README-generate-permission-map.md](scripts/README-generate-permission-map.md) for detailed documentation.
 
 ### Security Considerations
 

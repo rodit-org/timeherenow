@@ -1,27 +1,84 @@
 {
   "METHOD_PERMISSION_MAP": {
-    "login": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "logout": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "signclient": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "timezone": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "area": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "time": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "by-country": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "ip": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "hash": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "schedule": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "status": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "config": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "execute": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "metrics": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "system": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "list": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "list_all": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "revoke": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "cleanup": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "info": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "resources": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "resource": ["entityAndProperties", "propertiesOnly", "entityOnly"],
-    "schema": ["entityAndProperties", "propertiesOnly", "entityOnly"]
+    "logout": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "timezone": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "area": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "time": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "by-country": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "ip": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "hash": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "schedule": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "resources": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "resource": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "schema": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "metrics": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "system": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "list_all": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "revoke": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ],
+    "cleanup": [
+      "entityAndProperties",
+      "propertiesOnly",
+      "entityOnly"
+    ]
   }
 }
