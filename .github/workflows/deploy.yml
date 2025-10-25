@@ -92,6 +92,9 @@ jobs:
             echo 'DEBUG: API_DEFAULT_OPTIONS_LOG_DIR=${{ vars.API_DEFAULT_OPTIONS_LOG_DIR }}'
             echo 'DEBUG: NEAR_CONTRACT_ID=${{ vars.NEAR_CONTRACT_ID }}'
             echo 'DEBUG: NEAR_CREDENTIALS_FILE_PATH=${{ vars.NEAR_CREDENTIALS_FILE_PATH }}'
+            echo 'DEBUG: MINTING_FEEACCOUNT=${{ vars.MINTING_FEEACCOUNT }}'
+            echo 'DEBUG: MINTING_FEE=${{ vars.MINTING_FEE }}'
+            echo 'DEBUG: API_VERSION=${{ vars.API_VERSION }}'
             podman build -t timeherenow-image:latest -f api.Dockerfile .
             
             # Debug: Container will be checked after creation
@@ -129,6 +132,9 @@ jobs:
               -e VAULT_SECRET_ID='${{ secrets.VAULT_SECRET_ID }}' \
               -e VAULT_TOKEN_TTL='${{ vars.VAULT_TOKEN_TTL }}' \
               -e NEAR_CREDENTIALS_FILE_PATH='${{ vars.NEAR_CREDENTIALS_FILE_PATH }}' \
+              -e MINTING_FEEACCOUNT='${{ vars.MINTING_FEEACCOUNT }}' \
+              -e MINTING_FEE='${{ vars.MINTING_FEE }}' \
+              -e API_VERSION='${{ vars.API_VERSION }}' \
               -v ~/timeherenow-app/logs:/app/logs:Z \
               -v ~/timeherenow-app/data:/app/data:Z \
               -v ~/timeherenow-app/certs:/app/certs:ro,Z \

@@ -8,8 +8,11 @@
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
-const mcpService = require('../../sdk/services/mcpservice');
-const logger = require('../../sdk/services/logger');
+const { logger } = require('@rodit/rodit-auth-be');
+
+// Import the local MCP service implementation
+// This is application-specific and not part of the rodit-auth-be package
+const mcpService = require('../routes/mcproutes').mcpService;
 
 /**
  * Mounts the MCP Streamable HTTP transport on the provided Express `app`.

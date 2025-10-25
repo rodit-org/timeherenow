@@ -1,6 +1,4 @@
 {
-  "MINTING_FEEACCOUNT": "20251018-rodit-org.testnet",
-  "MINTING_FEE": "0.1",
   "METHOD_PERMISSION_MAP": {
     "login": ["entityAndProperties", "propertiesOnly", "entityOnly"],
     "logout": ["entityAndProperties", "propertiesOnly", "entityOnly"],

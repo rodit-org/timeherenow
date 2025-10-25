@@ -511,3 +511,4 @@ router.get('/schema', authenticate_apicall, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.mcpService = mcpService;
