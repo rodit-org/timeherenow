@@ -93,8 +93,17 @@ router.post('/timers/schedule', async (req, res) => {
   logger.infoWithContext('Timer scheduled', ctx);
 
   const handle = setTimeout(async () => {
-    // Use blockchain time from NEAR for webhook timestamp
-    const firedAtMs = timezoneService._getCachedNearMsOrThrow();
+    // Force fresh NEAR timestamp fetch to ensure fired_at differs from scheduled_at
+    // This is critical for tests that verify timestamp ordering
+    let firedAtMs;
+    try {
+      const timestampNs = await require('@rodit/rodit-auth-be').blockchainService.nearorg_rpc_timestamp();
+      firedAtMs = Math.floor(timestampNs / 1_000_000);
+    } catch (error) {
+      // Fallback to cached value if fresh fetch fails
+      logger.warnWithContext('Failed to fetch fresh NEAR timestamp, using cached', { ...ctx, error: error.message });
+      firedAtMs = timezoneService._getCachedNearMsOrThrow();
+    }
     const firedAt = new Date(firedAtMs).toISOString();
     const body = {
       timer_id: timerId,
@@ -179,7 +188,20 @@ async function restoreTimers(app) {
     };
     
     const handle = setTimeout(async () => {
-      const firedAtMs = timezoneService._getCachedNearMsOrThrow();
+      // Force fresh NEAR timestamp fetch to ensure fired_at differs from scheduled_at
+      let firedAtMs;
+      try {
+        const timestampNs = await require('@rodit/rodit-auth-be').blockchainService.nearorg_rpc_timestamp();
+        firedAtMs = Math.floor(timestampNs / 1_000_000);
+      } catch (error) {
+        // Fallback to cached value if fresh fetch fails
+        logger.warnWithContext('Failed to fetch fresh NEAR timestamp for restored timer, using cached', {
+          component: 'TimerRestore',
+          timer_id: timer.timer_id,
+          error: error.message
+        });
+        firedAtMs = timezoneService._getCachedNearMsOrThrow();
+      }
       const firedAt = new Date(firedAtMs).toISOString();
       const body = {
         timer_id: timer.timer_id,
