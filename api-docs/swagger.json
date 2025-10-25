@@ -479,6 +479,18 @@
           "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
           "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
         }
+      },
+      "head": {
+        "summary": "Health probe for metrics endpoint",
+        "description": "Returns 200 OK if the endpoint is available (no body)",
+        "tags": ["Metrics"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Endpoint is available"
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
       }
     },
     "/metrics/system": {
@@ -515,6 +527,84 @@
                       }
                     },
                     "timestamp": { "type": "integer" },
+                    "requestId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      },
+      "head": {
+        "summary": "Health probe for system metrics endpoint",
+        "description": "Returns 200 OK if the endpoint is available (no body)",
+        "tags": ["Metrics"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Endpoint is available"
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/metrics/reset": {
+      "post": {
+        "summary": "Reset performance metrics",
+        "description": "Reset performance metrics counters. Requires admin permissions.",
+        "tags": ["Metrics"],
+        "security": [{ "bearerAuth": [] }],
+        "x-permission-scopes": ["entityAndProperties"],
+        "responses": {
+          "200": {
+            "description": "Metrics reset successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "timestamp": { "type": "integer" },
+                    "requestId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "403": { "$ref": "#/components/responses/ErrorJsonResponse" },
+          "500": { "$ref": "#/components/responses/ErrorJsonResponse" }
+        }
+      }
+    },
+    "/metrics/debug": {
+      "get": {
+        "summary": "Debug metrics system",
+        "description": "Returns debug information about the metrics system status",
+        "tags": ["Metrics"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Debug information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "debug": {
+                      "type": "object",
+                      "properties": {
+                        "hasRoditClient": { "type": "boolean" },
+                        "clientType": { "type": "string" },
+                        "hasPerformanceService": { "type": "boolean" },
+                        "performanceServiceType": { "type": "string" },
+                        "metricsSnapshot": { "type": "object" },
+                        "timestamp": { "type": "integer" },
+                        "requestProcessingTime": { "type": "integer" }
+                      }
+                    },
                     "requestId": { "type": "string" }
                   }
                 }

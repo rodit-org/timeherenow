@@ -34,95 +34,9 @@ const authorize = (req, res, next) => {
 };
 
 /**
- * POST /api/sessions/login - Create a new session (login)
- * 
- * Handles client authentication and session creation
+ * NOTE: Login and logout are handled by /api/login and /api/logout routes.
+ * This file only contains session management endpoints (list, revoke, cleanup).
  */
-router.post('/login', (req, res) => {
-  const requestId = ulid();
-  const startTime = Date.now();
-  
-  req.logAction = "login-attempt";
-  
-  logger.info("Login request received", {
-    component: "SessionRoutes",
-    method: "createSession",
-    requestId,
-    method: req.method,
-    path: req.originalUrl,
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  // Delegate to RoditClient instance
-  if (!req.app.locals.roditClient) {
-    return res.status(503).json({ error: 'Authentication service unavailable' });
-  }
-  req.app.locals.roditClient.login_client(req, res);
-});
-
-/**
- * POST /api/sessions/logout - End a session (logout)
- * 
- * Handles client session termination
- * Protected: Requires authentication
- */
-router.post('/logout', authenticate_apicall, (req, res) => {
-  const requestId = ulid();
-  const startTime = Date.now();
-  
-  req.logAction = "logout-attempt";
-  
-  logger.info("Logout request received", {
-    component: "SessionRoutes",
-    method: "terminateSession",
-    requestId,
-    method: req.method,
-    path: req.originalUrl,
-    ip: req.ip,
-    userId: req.user ? req.user.id : "unknown",
-    userAgent: req.get('User-Agent')
-  });
-  
-  if (!req.app.locals.roditClient) {
-    return res.status(503).json({ error: 'Authentication service unavailable' });
-  }
-  
-  // Check if the logout_client method exists
-  if (typeof req.app.locals.roditClient.logout_client !== 'function') {
-    logger.error("logout_client method not available on roditClient", {
-      component: "SessionRoutes",
-      method: "terminateSession",
-      requestId,
-      availableMethods: Object.getOwnPropertyNames(req.app.locals.roditClient).filter(name => typeof req.app.locals.roditClient[name] === 'function'),
-      clientType: req.app.locals.roditClient.constructor.name
-    });
-    return res.status(503).json({ 
-      error: 'Logout service unavailable',
-      details: 'logout_client method not found on authentication service'
-    });
-  }
-  
-  try {
-    req.app.locals.roditClient.logout_client(req, res);
-  } catch (error) {
-    logger.error("Error calling logout_client", {
-      component: "SessionRoutes",
-      method: "terminateSession",
-      requestId,
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      }
-    });
-    return res.status(500).json({
-      error: 'Logout failed',
-      message: error.message,
-      requestId
-    });
-  }
-});
 
 /**
  * GET /api/sessions/list_all - Get all sessions

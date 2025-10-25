@@ -25,7 +25,11 @@
 - `GET /api/mcp/resource/:uri` - Get specific MCP resource
 - `GET /api/mcp/schema` - Get MCP OpenAPI schema
 - `GET /api/metrics` - Get performance metrics
+- `HEAD /api/metrics` - Health probe for metrics endpoint
 - `GET /api/metrics/system` - Get system resource metrics
+- `HEAD /api/metrics/system` - Health probe for system metrics endpoint
+- `POST /api/metrics/reset` - Reset performance metrics (admin only)
+- `GET /api/metrics/debug` - Debug metrics system status
 - `GET /api/sessions/list_all` - List all active sessions (admin)
 - `POST /api/sessions/revoke` - Revoke a specific session (admin)
 - `POST /api/sessions/cleanup` - Clean up expired sessions
@@ -492,6 +496,58 @@ Get system resource metrics including CPU, memory, and uptime.
     "uptime": 86400
   },
   "timestamp": 1729787880000,
+  "requestId": "01JD8X..."
+}
+```
+
+##### HEAD /api/metrics
+Health probe for metrics endpoint. Returns 200 OK with no body if the endpoint is available.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**: Empty body
+
+##### HEAD /api/metrics/system
+Health probe for system metrics endpoint. Returns 200 OK with no body if the endpoint is available.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**: Empty body
+
+##### POST /api/metrics/reset
+Reset performance metrics counters. Requires admin permissions.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**:
+```json
+{
+  "message": "Performance metrics reset successfully",
+  "timestamp": 1729787880000,
+  "requestId": "01JD8X..."
+}
+```
+
+**Errors**:
+- 403: Permission denied (admin permission required)
+
+##### GET /api/metrics/debug
+Debug endpoint to check metrics system status.
+
+**Headers**: `Authorization: Bearer <JWT_TOKEN>`
+
+**Response (200)**:
+```json
+{
+  "debug": {
+    "hasRoditClient": true,
+    "clientType": "RoditClient",
+    "hasPerformanceService": true,
+    "performanceServiceType": "PerformanceService",
+    "metricsSnapshot": { ... },
+    "timestamp": 1729787880000,
+    "requestProcessingTime": 15
+  },
   "requestId": "01JD8X..."
 }
 ```
