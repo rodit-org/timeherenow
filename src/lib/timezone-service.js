@@ -24,7 +24,7 @@ class TimeZoneService {
     // NEAR polling cache and settings
     this.nearCache = { ms: null, iso: null, fetchedAt: 0 };
     this._pollIntervalMs = parseInt(process.env.NEAR_POLL_MS) || 200; // 5 Hz
-    this._blockIntervalMs = parseInt(process.env.NEAR_BLOCK_MS) || 600; // ~0.6s
+    this._blockIntervalMs = parseInt(process.env.NEAR_BLOCK_MS) || 500; // ~0.5s
     this._networkMarginMs = parseInt(process.env.NEAR_NET_MARGIN_MS) || 50;
 
     // Start background polling

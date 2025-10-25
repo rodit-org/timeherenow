@@ -338,6 +338,10 @@ Schedules a delayed webhook to the SDK-configured destination. Returns a ULID im
 { "delay_seconds": 10, "payload": { "any": "json" } }
 ```
 
+**Constraints**:
+- `delay_seconds`: Required, must be between 1 and 172800 (48 hours)
+- **Minimum granularity**: 1 second. Sub-second delays are not supported.
+
 **Response (202)**:
 ```json
 { "timer_id": "01JD8X...", "delay_seconds": 10, "scheduled_at": "ISO", "execute_at": "ISO", "requestId": "01JD8X..." }
@@ -355,6 +359,13 @@ Schedules a delayed webhook to the SDK-configured destination. Returns a ULID im
   "payload": { "any": "json" }
 }
 ```
+
+**Blockchain Time Behavior**:
+- All timestamps (`scheduled_at`, `execute_at`, `fired_at`) use **NEAR blockchain time** as the exclusive time source
+- NEAR blockchain produces blocks at ~500-600ms intervals; timestamps advance in discrete steps, not continuously
+- `fired_at` is guaranteed to be >= `execute_at` to maintain temporal consistency
+- Due to blockchain time granularity and caching, `fired_at` may equal `execute_at` even when actual delivery occurs later
+- For applications requiring sub-second precision, consider the inherent ~600ms granularity of blockchain time
 
 #### MCP (Model Context Protocol) Endpoints
 

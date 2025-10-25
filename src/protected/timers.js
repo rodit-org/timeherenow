@@ -93,8 +93,9 @@ router.post('/timers/schedule', async (req, res) => {
   logger.infoWithContext('Timer scheduled', ctx);
 
   const handle = setTimeout(async () => {
-    // Force fresh NEAR timestamp fetch to ensure fired_at differs from scheduled_at
-    // This is critical for tests that verify timestamp ordering
+    // Fetch fresh NEAR blockchain timestamp for fired_at
+    // NEAR blockchain time advances in ~600ms blocks, so fresh fetches can return
+    // older timestamps than cached values. Ensure fired_at >= execute_at for temporal consistency.
     let firedAtMs;
     try {
       const timestampNs = await require('@rodit/rodit-auth-be').blockchainService.nearorg_rpc_timestamp();
@@ -104,6 +105,9 @@ router.post('/timers/schedule', async (req, res) => {
       logger.warnWithContext('Failed to fetch fresh NEAR timestamp, using cached', { ...ctx, error: error.message });
       firedAtMs = timezoneService._getCachedNearMsOrThrow();
     }
+    // Ensure fired_at is never earlier than execute_at (blockchain time granularity issue)
+    const executeAtMs = new Date(executeAt).getTime();
+    firedAtMs = Math.max(firedAtMs, executeAtMs);
     const firedAt = new Date(firedAtMs).toISOString();
     const body = {
       timer_id: timerId,
@@ -188,7 +192,8 @@ async function restoreTimers(app) {
     };
     
     const handle = setTimeout(async () => {
-      // Force fresh NEAR timestamp fetch to ensure fired_at differs from scheduled_at
+      // Fetch fresh NEAR blockchain timestamp for fired_at
+      // Ensure fired_at >= execute_at for temporal consistency
       let firedAtMs;
       try {
         const timestampNs = await require('@rodit/rodit-auth-be').blockchainService.nearorg_rpc_timestamp();
@@ -202,6 +207,9 @@ async function restoreTimers(app) {
         });
         firedAtMs = timezoneService._getCachedNearMsOrThrow();
       }
+      // Ensure fired_at is never earlier than execute_at (blockchain time granularity issue)
+      const executeAtMs = new Date(timer.execute_at).getTime();
+      firedAtMs = Math.max(firedAtMs, executeAtMs);
       const firedAt = new Date(firedAtMs).toISOString();
       const body = {
         timer_id: timer.timer_id,
