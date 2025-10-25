@@ -122,6 +122,7 @@ jobs:
               -e API_DEFAULT_OPTIONS_LOG_DIR='${{ vars.API_DEFAULT_OPTIONS_LOG_DIR }}' \
               -e NEAR_CONTRACT_ID='${{ vars.NEAR_CONTRACT_ID }}' \
               -e NEAR_CREDENTIALS_JSON_B64='${{ secrets.NEAR_CREDENTIALS_JSON_B64 }}' \
+              -e NEAR_RPC_URL='${{ secrets.NEAR_RPC_URL }}' \
               -e VAULT_ENDPOINT='${{ vars.VAULT_ENDPOINT }}' \
               -e VAULT_RODIT_KEYVALUE_PATH='${{ vars.VAULT_RODIT_KEYVALUE_PATH }}' \
               -e VAULT_ROLE_ID='${{ secrets.VAULT_ROLE_ID }}' \
