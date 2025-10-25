@@ -107,6 +107,8 @@ jobs:
             
             # Build and run API container
             echo 'Building and running API container...'
+            echo 'DEBUG: NODE_ENV=${{ vars.NODE_ENV }}'
+            echo 'DEBUG: LOG_LEVEL=${{ vars.LOG_LEVEL }}'
             echo 'DEBUG: LOKI_URL=${{ vars.LOKI_URL }}'
             echo 'DEBUG: LOKI_TLS_SKIP_VERIFY=${{ vars.LOKI_TLS_SKIP_VERIFY }}'
             echo 'DEBUG: LOKI_BASIC_AUTH length:' \${#LOKI_BASIC_AUTH}
