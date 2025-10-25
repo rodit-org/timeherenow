@@ -346,23 +346,26 @@ async function startServer() {
       
       // Apply performance tracking middleware to track request counts BEFORE routes
       const performanceService = authClient.getPerformanceService();
-      if (performanceService && typeof performanceService.middleware === 'function') {
-        app.use(performanceService.middleware());
-        logger.info("Performance tracking middleware applied", {
-          component: 'TimeHereNowAPI'
-        });
-      } else if (performanceService && typeof performanceService.trackRequest === 'function') {
-        // Fallback: manually track requests if middleware method doesn't exist
+      if (performanceService && typeof performanceService.recordRequest === 'function') {
+        // Create middleware to track all requests using recordRequest
         app.use((req, res, next) => {
-          performanceService.trackRequest();
+          const startTime = Date.now();
+          performanceService.recordRequest();
+          
           res.on('finish', () => {
-            if (res.statusCode >= 400) {
-              performanceService.trackError?.();
+            const duration = Date.now() - startTime;
+            // Record error if status code indicates failure
+            if (res.statusCode >= 400 && typeof performanceService.recordMetric === 'function') {
+              performanceService.recordMetric('error_count', 1);
+            }
+            // Record request duration
+            if (typeof performanceService.recordMetric === 'function') {
+              performanceService.recordMetric('request_duration', duration);
             }
           });
           next();
         });
-        logger.info("Manual request tracking middleware applied", {
+        logger.info("Performance tracking middleware applied using recordRequest", {
           component: 'TimeHereNowAPI'
         });
       } else {
