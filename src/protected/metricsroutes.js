@@ -20,6 +20,11 @@ const { createLogContext, logErrorWithMetrics } = logger;
 
 // Get performance service from centralized client when available
 const getPerformanceService = (req) => {
+  // First try to get the stored instance from app.locals (same instance used by middleware)
+  if (req?.app?.locals?.performanceService) {
+    return req.app.locals.performanceService;
+  }
+  // Fallback to getting from client
   const client = req?.app?.locals?.roditClient;
   if (!client) throw new Error('Authentication service unavailable');
   return client.getPerformanceService();

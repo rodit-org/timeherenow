@@ -347,9 +347,14 @@ async function startServer() {
       // Apply performance tracking middleware to track request counts BEFORE routes
       const performanceService = authClient.getPerformanceService();
       if (performanceService && typeof performanceService.recordRequest === 'function') {
+        // Store performance service instance for debugging
+        app.locals.performanceService = performanceService;
+        
         // Create middleware to track all requests using recordRequest
         app.use((req, res, next) => {
           const startTime = Date.now();
+          
+          // Call recordRequest to increment request counter
           performanceService.recordRequest();
           
           res.on('finish', () => {
@@ -366,7 +371,8 @@ async function startServer() {
           next();
         });
         logger.info("Performance tracking middleware applied using recordRequest", {
-          component: 'TimeHereNowAPI'
+          component: 'TimeHereNowAPI',
+          performanceServiceId: performanceService.constructor.name
         });
       } else {
         logger.warn("Performance tracking not available from SDK", {
