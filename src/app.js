@@ -354,8 +354,8 @@ async function startServer() {
         app.use((req, res, next) => {
           const startTime = Date.now();
           
-          // Call recordRequest to increment request counter
-          performanceService.recordRequest();
+          // Call recordRequest to increment request counter - pass req object
+          performanceService.recordRequest(req);
           
           res.on('finish', () => {
             const duration = Date.now() - startTime;
