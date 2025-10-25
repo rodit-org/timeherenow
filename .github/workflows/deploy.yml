@@ -121,6 +121,10 @@ jobs:
             echo 'DEBUG: MINTING_FEEACCOUNT=${{ vars.MINTING_FEEACCOUNT }}'
             echo 'DEBUG: MINTING_FEE=${{ vars.MINTING_FEE }}'
             echo 'DEBUG: API_VERSION=${{ vars.API_VERSION }}'
+            echo 'DEBUG: NEAR_POLL_MS=${{ vars.NEAR_POLL_MS }}'
+            echo 'DEBUG: NEAR_BLOCK_MS=${{ vars.NEAR_BLOCK_MS }}'
+            echo 'DEBUG: NEAR_NET_MARGIN_MS=${{ vars.NEAR_NET_MARGIN_MS }}'
+            echo 'DEBUG: NEAR_RPC_TIMEOUT=${{ vars.NEAR_RPC_TIMEOUT }}'
             podman build -t timeherenow-image:latest -f api.Dockerfile .
             
             # Debug: Container will be checked after creation
@@ -154,12 +158,11 @@ jobs:
               -e NEAR_CONTRACT_ID='${{ vars.NEAR_CONTRACT_ID }}' \
               -e NEAR_CREDENTIALS_JSON_B64='${{ secrets.NEAR_CREDENTIALS_JSON_B64 }}' \
               -e NEAR_RPC_URL='${{ secrets.NEAR_RPC_URL }}' \
-              -e VAULT_ENDPOINT='${{ vars.VAULT_ENDPOINT }}' \
-              -e VAULT_RODIT_KEYVALUE_PATH='${{ vars.VAULT_RODIT_KEYVALUE_PATH }}' \
-              -e VAULT_ROLE_ID='${{ secrets.VAULT_ROLE_ID }}' \
-              -e VAULT_SECRET_ID='${{ secrets.VAULT_SECRET_ID }}' \
-              -e VAULT_TOKEN_TTL='${{ vars.VAULT_TOKEN_TTL }}' \
               -e NEAR_CREDENTIALS_FILE_PATH='${{ vars.NEAR_CREDENTIALS_FILE_PATH }}' \
+              -e NEAR_POLL_MS='${{ vars.NEAR_POLL_MS }}' \
+              -e NEAR_BLOCK_MS='${{ vars.NEAR_BLOCK_MS }}' \
+              -e NEAR_NET_MARGIN_MS='${{ vars.NEAR_NET_MARGIN_MS }}' \
+              -e NEAR_RPC_TIMEOUT='${{ vars.NEAR_RPC_TIMEOUT }}' \
               -e MINTING_FEEACCOUNT='${{ vars.MINTING_FEEACCOUNT }}' \
               -e MINTING_FEE='${{ vars.MINTING_FEE }}' \
               -e API_VERSION='${{ vars.API_VERSION }}' \
