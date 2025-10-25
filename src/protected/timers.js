@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const { ulid } = require('ulid');
-const { logger } = require('@rodit/rodit-auth-be');
+const { logger, RoditClient } = require('@rodit/rodit-auth-be');
 const TimeZoneService = require('../lib/timezone-service');
 const TimerPersistence = require('../lib/timer-persistence');
+
+// Create SDK client instance for authorization
+const sdkClient = new RoditClient();
+
+// Create authorization middleware
+const authorize = (req, res, next) => {
+  return sdkClient.authorize(req, res, next);
+};
 
 // Initialize timezone service for blockchain time
 const timezoneService = new TimeZoneService();
@@ -38,7 +46,11 @@ function ensureTimerStore(app) {
   return app.locals.timerStore;
 }
 
-router.post('/timers/schedule', async (req, res) => {
+/**
+ * POST /timers/schedule - Schedule a webhook timer
+ * Protected: Requires authentication and authorization
+ */
+router.post('/timers/schedule', authorize, async (req, res) => {
   const requestId = req.requestId || ulid();
   const { delay_seconds, payload = null } = req.body || {};
 

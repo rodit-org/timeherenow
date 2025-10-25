@@ -191,9 +191,9 @@ router.get('/list_all', authenticate_apicall, authorize, async (req, res) => {
  * POST /api/sessions/cleanup - Clean up expired sessions
  * 
  * Triggers cleanup of expired sessions and returns cleanup statistics
- * Protected: Requires authentication
+ * Protected: Requires authentication and authorization
  */
-router.post('/cleanup', authenticate_apicall, async (req, res) => {
+router.post('/cleanup', authenticate_apicall, authorize, async (req, res) => {
   const requestId = ulid();
   const startTime = Date.now();
   
@@ -293,7 +293,11 @@ router.post('/cleanup', authenticate_apicall, async (req, res) => {
  * POST /api/sessions/revoke - Revoke a specific session (admin only)
  * 
  * Allows administrators to terminate a specific session
- * Protected: Requires authentication and admin privileges
+ * Protected: Requires authentication and route permission
+ * 
+ * NOTE: Unlike /logout which requires the user to own the session,
+ * /revoke only requires the route to be in the user's permissioned_routes.
+ * This allows admins to revoke ANY session if they have permission to this endpoint.
  */
 router.post('/revoke', authenticate_apicall, authorize, (req, res) => {
   const requestId = ulid();
@@ -374,59 +378,6 @@ router.post('/revoke', authenticate_apicall, authorize, (req, res) => {
       error: "Failed to terminate session",
       message: error.message,
       sessionId,
-      requestId
-    });
-  }
-});
-
-/**
- * POST /api/sessions/cleanup - Run manual session cleanup
- * 
- * Admin route - Force cleanup of expired sessions
- * Protected: Requires authentication and permissions
- */
-router.post('/cleanup', authenticate_apicall, async (req, res) => {
-  const requestId = ulid();
-  const startTime = Date.now();
-  
-  try {
-    logger.info("Manual session cleanup requested", {
-      component: "SessionRoutes",
-      method: "cleanupSessions",
-      requestId,
-      adminUser: req.user.id
-    });
-    // Use the centralized RoditClient to run cleanup
-    const result = await req.app.locals.roditClient.runManualCleanup();
-    
-    logger.info("Manual session cleanup completed", {
-      component: "SessionRoutes",
-      method: "cleanupSessions",
-      requestId,
-      removedCount: result.removedCount,
-      remainingCount: result.remainingCount,
-      duration: Date.now() - startTime
-    });
-    
-    res.json({
-      message: "Session cleanup completed",
-      removedCount: result.removedCount,
-      remainingCount: result.remainingCount,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    logger.error("Failed to run session cleanup", {
-      component: "SessionRoutes",
-      method: "cleanupSessions",
-      requestId,
-      error: error.message,
-      stack: error.stack,
-      duration: Date.now() - startTime
-    });
-    
-    res.status(500).json({
-      error: "Failed to run session cleanup",
-      message: error.message,
       requestId
     });
   }
