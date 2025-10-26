@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@rodit/rodit-auth-be": "^2.7.10",
+    "@rodit/rodit-auth-be": "^2.8.0",
     "@vvo/tzdb": "^6.186.0",
     "axios": "^1.6.0",
     "base64url": "^3.0.1",
