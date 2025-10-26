@@ -239,6 +239,143 @@ near contract call-function as-read-only <CONTRACT_ID> nft_token \
 
 ---
 
+#### RODiT Wallet Management Script
+
+The `scripts/roditwallet.sh` script provides a command-line interface for managing NEAR accounts and RODiT tokens. This script simplifies common operations like creating accounts, viewing RODiT tokens, and transferring tokens between accounts.
+
+##### Prerequisites
+
+- **NEAR CLI**: Install the latest NEAR CLI
+  ```bash
+  npm install -g near-cli
+  ```
+- **Environment Variables**: Set the following in your shell environment:
+  ```bash
+  export BLOCKCHAIN_ENV="testnet"  # or "mainnet"
+  export RODITCONTRACTID="your-rodit-contract.near"
+  ```
+
+##### Obtaining the Script
+
+The script is located in the repository at `scripts/roditwallet.sh`. Make it executable:
+
+```bash
+chmod +x scripts/roditwallet.sh
+```
+
+##### Usage
+
+**Get Help**:
+```bash
+./scripts/roditwallet.sh help
+```
+
+**List All Available Accounts**:
+```bash
+./scripts/roditwallet.sh
+```
+Displays all accounts found in `~/.near-credentials/$BLOCKCHAIN_ENV/`
+
+**View RODiT Tokens in an Account**:
+```bash
+./scripts/roditwallet.sh <account_id>
+```
+Lists all RODiT token IDs owned by the account and displays the account balance.
+
+Example:
+```bash
+./scripts/roditwallet.sh alice.testnet
+```
+
+**View Specific RODiT Token Details**:
+```bash
+./scripts/roditwallet.sh <account_id> <rodit_token_id>
+```
+Displays the full metadata for a specific RODiT token.
+
+Example:
+```bash
+./scripts/roditwallet.sh alice.testnet token_12345
+```
+
+**View Account Keys**:
+```bash
+./scripts/roditwallet.sh <account_id> keys
+```
+Displays the private key (Base58) and implicit account ID (Hex) for the account.
+
+**⚠️ Security Warning**: Never share your private keys. Store them securely.
+
+**Create a New Account**:
+```bash
+./scripts/roditwallet.sh genaccount
+```
+Generates a new uninitialized account. The account is created locally but needs to be initialized on the blockchain with at least 0.01 NEAR.
+
+**Initialize an Account**:
+```bash
+./scripts/roditwallet.sh <funding_account_id> <uninitialized_account_id> init
+```
+Initializes a new account by sending 0.01 NEAR from a funded account.
+
+Example:
+```bash
+./scripts/roditwallet.sh alice.testnet bob.testnet init
+```
+
+**Transfer RODiT Between Accounts**:
+```bash
+./scripts/roditwallet.sh <origin_account_id> <destination_account_id> <rodit_token_id>
+```
+Transfers a RODiT token from one account to another.
+
+Example:
+```bash
+./scripts/roditwallet.sh alice.testnet bob.testnet token_12345
+```
+
+##### Common Workflows
+
+**Setting Up a New Test Account**:
+```bash
+# 1. Create a new account
+./scripts/roditwallet.sh genaccount
+# Output: new_account_123.testnet
+
+# 2. Initialize it with NEAR from an existing account
+./scripts/roditwallet.sh existing_account.testnet new_account_123.testnet init
+
+# 3. Verify the account
+./scripts/roditwallet.sh new_account_123.testnet
+```
+
+**Managing RODiT Tokens**:
+```bash
+# 1. View all RODiTs in your account
+./scripts/roditwallet.sh myaccount.testnet
+
+# 2. View details of a specific RODiT
+./scripts/roditwallet.sh myaccount.testnet token_abc123
+
+# 3. Transfer RODiT to another account
+./scripts/roditwallet.sh myaccount.testnet recipient.testnet token_abc123
+```
+
+##### Script Version
+
+The script displays its version on startup:
+```
+Version 0.93.53 running on testnet at Smart Contract rodit.testnet
+```
+
+##### Troubleshooting
+
+- **"Account does not exist in the blockchain"**: The account needs to be initialized with at least 0.01 NEAR
+- **"There is a lag while collecting information"**: Normal behavior when querying the blockchain
+- **Environment variables not set**: Ensure `BLOCKCHAIN_ENV` and `RODITCONTRACTID` are exported in your shell
+
+---
+
 #### Authentication Endpoints
 
 ##### POST /login
