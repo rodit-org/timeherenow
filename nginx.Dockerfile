@@ -1,6 +1,10 @@
 FROM docker.io/nginx:mainline-alpine
 
-RUN apk add --no-cache openssl &&     rm /etc/nginx/conf.d/default.conf &&     mkdir -p /app/certs
+# Update all packages including pcre2 to patch CVE-2025-58050
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache openssl && \
+    rm /etc/nginx/conf.d/default.conf && \
+    mkdir -p /app/certs
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
