@@ -23,6 +23,7 @@ env:
   API_DOMAIN: api.timeherenow.com
   API_PORT: 8443
   NODE_VERSION: 20
+  NEAR_RPC_URL: ${{ secrets.NEAR_RPC_URL }}
 
 jobs:
   test-and-deploy:
@@ -157,7 +158,7 @@ jobs:
               -e API_DEFAULT_OPTIONS_LOG_DIR='${{ vars.API_DEFAULT_OPTIONS_LOG_DIR }}' \
               -e NEAR_CONTRACT_ID='${{ vars.NEAR_CONTRACT_ID }}' \
               -e NEAR_CREDENTIALS_JSON_B64='${{ secrets.NEAR_CREDENTIALS_JSON_B64 }}' \
-              -e NEAR_RPC_URL='${{ secrets.NEAR_RPC_URL }}' \
+              -e NEAR_RPC_URL='${{ env.NEAR_RPC_URL }}' \
               -e NEAR_CREDENTIALS_FILE_PATH='${{ vars.NEAR_CREDENTIALS_FILE_PATH }}' \
               -e NEAR_POLL_MS='${{ vars.NEAR_POLL_MS }}' \
               -e NEAR_BLOCK_MS='${{ vars.NEAR_BLOCK_MS }}' \

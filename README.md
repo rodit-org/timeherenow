@@ -295,7 +295,7 @@ Displays the full metadata for a specific RODiT token.
 
 Example:
 ```bash
-./scripts/roditwallet.sh alice.testnet token_12345
+./scripts/roditwallet.sh alice.near token_12345
 ```
 
 **View Account Keys**:
@@ -320,7 +320,7 @@ Initializes a new account by sending 0.01 NEAR from a funded account.
 
 Example:
 ```bash
-./scripts/roditwallet.sh alice.testnet bob.testnet init
+./scripts/roditwallet.sh alice.near bob.near init
 ```
 
 **Transfer RODiT Between Accounts**:
@@ -331,7 +331,7 @@ Transfers a RODiT token from one account to another.
 
 Example:
 ```bash
-./scripts/roditwallet.sh alice.testnet bob.testnet token_12345
+./scripts/roditwallet.sh alice.near bob.near token_12345
 ```
 
 ##### Common Workflows
@@ -343,7 +343,7 @@ Example:
 # Output: new_account_123.testnet
 
 # 2. Initialize it with NEAR from an existing account
-./scripts/roditwallet.sh existing_account.testnet new_account_123.testnet init
+./scripts/roditwallet.sh existing_account.near new_account_123.near init
 
 # 3. Verify the account
 ./scripts/roditwallet.sh new_account_123.testnet
@@ -355,17 +355,17 @@ Example:
 ./scripts/roditwallet.sh myaccount.testnet
 
 # 2. View details of a specific RODiT
-./scripts/roditwallet.sh myaccount.testnet token_abc123
+./scripts/roditwallet.sh myaccount.near token_abc123
 
 # 3. Transfer RODiT to another account
-./scripts/roditwallet.sh myaccount.testnet recipient.testnet token_abc123
+./scripts/roditwallet.sh myaccount.near recipient.near token_abc123
 ```
 
 ##### Script Version
 
 The script displays its version on startup:
 ```
-Version 0.93.53 running on testnet at Smart Contract rodit.testnet
+Version 0.93.53 running on at Smart Contract rodit.testnet
 ```
 
 ##### Troubleshooting
