@@ -1,6 +1,6 @@
 #### Quick Reference for Frontend Integration
 
-**Base URL**: `https://api.timeherenow.com`.
+**Base URL**: `https://api.timeherenow.com`
 
 
 **Available Endpoints**:
