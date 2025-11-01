@@ -600,7 +600,7 @@ async function login_client(req, res) {
           error: {
             code: "INVALID_TOKEN",
             message: validationError.message || "Invalid jwt_token",
-            details: process.env.NODE_ENV === "development" ? validationError.message : undefined,
+            details: process.env.NODE_ENV !== 'production' ? validationError.message : undefined,
             requestId,
           },
         });
@@ -685,7 +685,7 @@ async function login_client(req, res) {
         error: {
           code: "AUTH_ERROR",
           message: "Authentication failed",
-          details: process.env.NODE_ENV === "development" ? error.message : undefined,
+          details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
           requestId,
         },
       });

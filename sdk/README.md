@@ -2,7 +2,7 @@
 
 A comprehensive Node.js SDK for implementing RODiT-based mutual authentication, authorization, self-configuration, and session management in Express.js applications.
 
-**Version:** 2.8.0  
+**Version:** 2.9.0  
 **License:** Proprietary  
 **Author:** Discernible Inc.
 
@@ -216,8 +216,8 @@ export NEAR_CONTRACT_ID=your-contract.testnet
 **Application Configuration:**
 ```bash
 export SERVERPORT=3000
-export LOG_LEVEL=info
-export NODE_ENV=production
+export NODE_ENV=production  # Environment: production, development, test
+export LOG_LEVEL=info       # Logging: error, warn, info, debug, trace
 export API_DEFAULT_OPTIONS_DB_PATH=/app/data/database.sqlite
 ```
 
@@ -640,6 +640,121 @@ The SDK automatically configures itself from multiple sources (in priority order
 2. **Configuration Files** (config/default.json, config/production.json)
 3. **Vault Credentials** (Production)
 4. **SDK Defaults** (Fallback)
+
+### Environment Configuration: NODE_ENV and LOG_LEVEL
+
+The SDK uses **two separate environment variables** for configuration, following Node.js ecosystem standards:
+
+#### NODE_ENV - Environment Type & Security Behavior
+
+Controls environment-specific behavior and security settings:
+
+**Values:**
+- `production` - Production environment (strict security, no error details)
+- `development` - Development environment (relaxed security, detailed errors)
+- `test` - Testing environment (allows bypasses for automated testing)
+- `staging` - Staging environment (production security with optional verbose logging)
+
+**Default:** `production` (secure by default)
+
+**Controls:**
+- ✅ Error detail exposure in API responses
+- ✅ Peer public key requirement enforcement
+- ✅ Webhook verification bypass (test mode only)
+- ✅ Security-critical behavior
+
+#### LOG_LEVEL - Logging Verbosity
+
+Controls Winston logger verbosity independently from environment:
+
+**Values:**
+- `error` - Only errors
+- `warn` - Warnings and errors
+- `info` - Informational messages, warnings, and errors (recommended for production)
+- `debug` - Detailed debugging information
+- `trace` - Maximum verbosity with full traces
+
+**Default:** `info`
+
+**Controls:**
+- ✅ Winston logger output level
+- ✅ Debug payload logging
+- ✅ Log verbosity only (not security)
+
+#### Separation of Concerns
+
+```javascript
+// Environment detection (security)
+const isProduction = process.env.NODE_ENV === 'production';
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isTest = process.env.NODE_ENV === 'test';
+
+// Logging verbosity (independent)
+const config = roditClient.getConfig();
+const logLevel = config.get('LOG_LEVEL', 'info');
+```
+
+#### Configuration Examples
+
+**Production (normal):**
+```bash
+export NODE_ENV=production
+export LOG_LEVEL=info
+# Results in:
+# - Strict security enforcement
+# - No error details in responses
+# - Minimal logging output
+```
+
+**Production (troubleshooting):**
+```bash
+export NODE_ENV=production
+export LOG_LEVEL=debug
+# Results in:
+# - Strict security enforcement (still production)
+# - No error details in responses (still secure)
+# - Verbose logging for debugging
+```
+
+**Development:**
+```bash
+export NODE_ENV=development
+export LOG_LEVEL=debug
+# Results in:
+# - Relaxed security for development
+# - Detailed error messages in responses
+# - Verbose logging
+```
+
+**Testing:**
+```bash
+export NODE_ENV=test
+export LOG_LEVEL=error
+# Results in:
+# - Test mode (allows bypasses)
+# - Detailed error messages
+# - Only errors logged (cleaner test output)
+```
+
+**Staging:**
+```bash
+export NODE_ENV=production
+export LOG_LEVEL=warn
+# Results in:
+# - Production security
+# - No error details exposed
+# - Only warnings and errors logged
+```
+
+#### Behavior Matrix
+
+| Scenario | NODE_ENV | LOG_LEVEL | Security | Error Details | Logging |
+|----------|----------|-----------|----------|---------------|---------|
+| Production | `production` | `info` | ✅ Strict | ❌ Hidden | Minimal |
+| Production Debug | `production` | `debug` | ✅ Strict | ❌ Hidden | Verbose |
+| Development | `development` | `debug` | ⚠️ Relaxed | ✅ Shown | Verbose |
+| Testing | `test` | `error` | ⚠️ Bypass OK | ✅ Shown | Errors only |
+| Staging | `production` | `warn` | ✅ Strict | ❌ Hidden | Warnings |
 
 ### Vault-Based Configuration (Production)
 
@@ -1683,9 +1798,9 @@ Use environment variables for sensitive and environment-specific values:
 
 ```javascript
 // ✅ Good - Environment-aware configuration
-const isProduction = process.env.NODE_ENV === 'production';
 const config = roditClient.getConfig();
-const logLevel = config.get('LOG_LEVEL', isProduction ? 'info' : 'debug');
+const logLevel = config.get('LOG_LEVEL', 'info');
+const isProduction = ['info', 'warn', 'error'].includes(logLevel);
 
 // Production should use vault credentials
 if (isProduction && process.env.RODIT_NEAR_CREDENTIALS_SOURCE !== 'vault') {
@@ -2026,8 +2141,7 @@ console.log('Logger transports:', transports.map(t => t.name));
 Enable debug logging for troubleshooting:
 
 ```bash
-export LOG_LEVEL=debug
-export NODE_ENV=development
+export LOG_LEVEL=debug  # Use 'debug' or 'trace' for development mode
 ```
 
 This will provide detailed information about:
@@ -2077,7 +2191,7 @@ app.get('/health', async (req, res) => {
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
+      logLevel: config.get('LOG_LEVEL', 'info'),
       components: {
         roditClient: !!client,
         configuration: !!(configObject && configObject.own_rodit),

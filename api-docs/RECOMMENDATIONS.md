@@ -26,7 +26,7 @@
 
 - **Harden Dockerfile and runtime**
   - Use multi-stage builds; `COPY package*.json` then `npm ci --omit=dev`; keep non-root user and `tini`.
-  - Pin base images and consider periodic rebuilds; set `NODE_ENV=production` in image.
+  - Pin base images and consider periodic rebuilds; set `LOG_LEVEL=info` (or `warn`/`error`) for production.
 
 - **Improve gateway (Nginx) and performance defaults**
   - Enable gzip/brotli for JSON; tune proxy buffers/timeouts for expected payloads.

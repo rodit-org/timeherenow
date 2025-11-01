@@ -7,6 +7,7 @@
 // Reusable webhook handler for RODiT SDK
 
 const crypto = require("crypto");
+const config = require('../../services/configsdk');
 const logger = require("../../services/logger");
 const { createLogContext, logErrorWithMetrics, infoWithContextIf, errorWithContextIf } = logger;
 const { ulid } = require("ulid");
@@ -216,7 +217,7 @@ function createWebhookAuthenticationMiddleware() {
       
       // Check if we have the server's public key
       if (!req.server_public_key_base64url) {
-        // In test environments, we might want to bypass verification
+        // In test environments or with bypass flag, we might want to bypass verification
         if (process.env.NODE_ENV === 'test' || process.env.BYPASS_WEBHOOK_VERIFICATION === 'true') {
           logger.warnWithContext("Bypassing webhook authentication in test environment", logContext);
           return next();
@@ -712,7 +713,7 @@ function createWebhookHandler(stateManager, configuration = {}) {
          ...baseContext,
          webhookUrl: formattedWebhookUrl,
          timestamp: timestamp.toString(),
-         payload: process.env.NODE_ENV === 'development' ? payload : undefined, // Only log payload in development
+         payload: ['debug', 'trace'].includes(config.get('LOG_LEVEL', 'info')) ? payload : undefined, // Only log payload in debug mode
          signatureHex: signature_hex_ofpayload
        });
    

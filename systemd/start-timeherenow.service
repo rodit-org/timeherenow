@@ -1,13 +1,16 @@
 [Unit]
 Description=Start TimeHereNow Podman stack
 Documentation=https://github.com/cableguard/timeherenow
-After=network-online.target podman.service
-Wants=network-online.target podman.service
+After=network-online.target podman.socket
+Wants=network-online.target
+Requires=podman.socket
 
 [Service]
 Type=oneshot
 # Update the User and WorkingDirectory paths if the deployment user or path differ.
 User=icarus39
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
 WorkingDirectory=/home/icarus39/timeherenow-rodit
 ExecStart=/home/icarus39/timeherenow-rodit/start-timeherenow.sh
 TimeoutStartSec=300

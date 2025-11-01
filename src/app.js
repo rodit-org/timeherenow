@@ -99,7 +99,8 @@ const { createUserRateLimitMiddleware } = require("./middleware/user-rate-limit"
 
 // Configuration constants
 const SERVERPORT = config.get('SERVERPORT');
-const isProduction = config.get('NODE_ENV') === "production";
+const LOG_LEVEL = config.get('LOG_LEVEL', 'info');
+const isProduction = ['info', 'warn', 'error'].includes(LOG_LEVEL);
 const SERVICE_NAME = config.get('SERVICE_NAME');
 
 const RATE_LIMIT_SETTINGS = config.has('RATE_LIMITING') 
@@ -424,7 +425,7 @@ async function startServer() {
     server = app.listen(SERVERPORT, () => {
       const serverInfo = {
         port: SERVERPORT,
-        env: config.get('NODE_ENV'),
+        logLevel: LOG_LEVEL,
         service: SERVICE_NAME,
         endpoints: [
           { method: 'POST', path: '/api/login', description: 'Authentication' },
@@ -469,8 +470,8 @@ async function startServer() {
         });
       }
 
-      // For development, show endpoints
-      if (config.get('NODE_ENV') !== 'production') {
+      // For development (debug/trace), show endpoints
+      if (!isProduction) {
         console.log(`\n🌍 Time Here Now API running on port ${SERVERPORT}`);
         console.log('📚 Available endpoints:');
         serverInfo.endpoints.forEach(endpoint => {

@@ -80,7 +80,7 @@ const mcpService = {
           METHOD_PERMISSION_MAP: config.has('METHOD_PERMISSION_MAP') ? config.get('METHOD_PERMISSION_MAP') : null,
           SERVERPORT: config.has('SERVERPORT') ? config.get('SERVERPORT') : null,
           SERVICE_NAME: config.has('SERVICE_NAME') ? config.get('SERVICE_NAME') : null,
-          NODE_ENV: config.has('NODE_ENV') ? config.get('NODE_ENV') : null
+          LOG_LEVEL: config.has('LOG_LEVEL') ? config.get('LOG_LEVEL') : null
         };
         return { type: 'application/json', content: configData };
       } catch (error) {
