@@ -1,0 +1,19 @@
+[Unit]
+Description=Start TimeHereNow Podman stack
+Documentation=https://github.com/cableguard/timeherenow
+After=network-online.target podman.service
+Wants=network-online.target podman.service
+
+[Service]
+Type=oneshot
+# Update the User and WorkingDirectory paths if the deployment user or path differ.
+User=icarus39
+WorkingDirectory=/home/icarus39/timeherenow-rodit
+ExecStart=/home/icarus39/timeherenow-rodit/start-timeherenow.sh
+TimeoutStartSec=300
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
