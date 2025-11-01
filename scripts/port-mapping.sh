@@ -102,7 +102,7 @@ add_rules() {
     # OUTPUT: Redirect locally generated traffic from SOURCE_PORT to DEST_PORT
     # This allows local processes to connect to SOURCE_PORT and reach the service on DEST_PORT
     iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT
-    iptables -t nat -A OUTPUT -p tcp -d ::1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT
+    # Note: IPv6 rule removed due to nf_tables compatibility issues
     
     # NOTE: We do NOT redirect outbound traffic to external hosts on port 443
     # This would break HTTPS connections to external services (e.g., NEAR RPC, APIs)
@@ -120,13 +120,48 @@ remove_rules() {
     # Remove OUTPUT rules (both old bidirectional and new localhost-only)
     iptables -t nat -D OUTPUT -p tcp --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
     iptables -t nat -D OUTPUT -p tcp -d 127.0.0.1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
-    iptables -t nat -D OUTPUT -p tcp -d ::1 --dport $SOURCE_PORT -j REDIRECT --to-port $DEST_PORT 2>/dev/null || true
     
     # Remove old bidirectional rules (DEST_PORT -> SOURCE_PORT) if they exist
     iptables -t nat -D PREROUTING -p tcp --dport $DEST_PORT -j REDIRECT --to-port $SOURCE_PORT 2>/dev/null || true
     iptables -t nat -D OUTPUT -p tcp --dport $DEST_PORT -j REDIRECT --to-port $SOURCE_PORT 2>/dev/null || true
     
     echo "Port mapping disabled: $SOURCE_PORT -> $DEST_PORT"
+}
+
+# Function to remove ALL redirect rules for a given source port (cleanup conflicting rules)
+cleanup_all_source_port_rules() {
+    local port=$1
+    echo "Cleaning up ALL redirect/DNAT rules for port $port..."
+    
+    # Get all PREROUTING rules for this port and remove them (REDIRECT and DNAT)
+    # We need to remove from highest line number to lowest to avoid renumbering issues
+    local rules_found=0
+    while true; do
+        local line_num=$(iptables -t nat -L PREROUTING -n --line-numbers | grep "tcp dpt:$port" | grep -E "(REDIRECT|DNAT)" | tail -n1 | awk '{print $1}')
+        if [ -z "$line_num" ]; then
+            break
+        fi
+        echo "  Removing PREROUTING rule #$line_num"
+        iptables -t nat -D PREROUTING $line_num 2>/dev/null || break
+        rules_found=1
+    done
+    
+    # Get all OUTPUT rules for this port and remove them
+    while true; do
+        local line_num=$(iptables -t nat -L OUTPUT -n --line-numbers | grep "tcp dpt:$port" | grep "REDIRECT" | tail -n1 | awk '{print $1}')
+        if [ -z "$line_num" ]; then
+            break
+        fi
+        echo "  Removing OUTPUT rule #$line_num"
+        iptables -t nat -D OUTPUT $line_num 2>/dev/null || break
+        rules_found=1
+    done
+    
+    if [ "$rules_found" = "1" ]; then
+        echo "Cleanup complete for port $port"
+    else
+        echo "No existing rules found for port $port"
+    fi
 }
 
 # Function to save iptables rules permanently
@@ -151,8 +186,8 @@ save_permanent() {
 # Main logic
 case "$ACTION" in
     enable)
-        # Remove existing rules first (if any) to avoid duplicates
-        remove_rules 2>/dev/null || true
+        # Clean up ALL existing rules for the source port to avoid conflicts
+        cleanup_all_source_port_rules $SOURCE_PORT
         
         # Add new rules
         add_rules
